@@ -1,0 +1,248 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
+
+    <title>Pricing example for Bootstrap</title>
+
+    
+
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="pricing.css" rel="stylesheet">
+</head>
+
+<body>
+
+<style>
+    table {
+
+        width:100%;
+
+    }
+    li {
+        text-align: left;
+        margin: 5px 0;
+
+    }
+    .li-more-margin {
+        margin: 10px 0;
+    }
+
+    .relay-text{
+        text-align: left;
+        width:75%;
+    }
+    .relay-input{
+        width:25%;
+    }
+    .btn {
+        margin-top: 30px;
+    }
+    .temp-input{
+        width:25%;
+    }
+    .card-body {
+
+        align-content: center;
+    }
+    input {
+        height: 30px;
+        flex: 0 0 200px;
+        margin-left: 10px;
+    }
+
+
+
+</style>
+
+<div class="form-group">
+
+<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
+    <h1 class="display-4">Control</h1>
+    <p class="lead">Control all systems</p>
+</div>
+
+<div class="container">
+    <div class="card-deck text-center">
+        <div class="card box-shadow mx-auto" style="width: 18rem;">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Readings</h4>
+            </div>
+            <div class="card-body mx-auto">
+
+                <ul class="list-inline" >
+
+                    <li>Temp 80</li>
+                    <li>Co2 600 ppm</li>
+                    <li>Humidity 45%</li>
+
+                </ul>
+
+            </div>
+        </div>
+        <div class="card box-shadow mx-auto" style="width: 18rem;" >
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Wifi</h4>
+            </div>
+            <div class="card-body mx-auto"">
+
+
+                <ul class="list-unstyled">
+                    <li class="li-more-margin">Enable Local Network : <input type="checkbox"/></li>
+                    <li>SSID <input size="10"/></li>
+                    <li>Pass <input size="10"/></li>
+
+
+                </ul>
+
+                <ul class="list-unstyled">
+
+                    <li class="li-more-margin">Enable AP Network : <input class="c" type="checkbox"/></li>
+
+                    <li>SSID <input size="10" value="mush-room"/></li>
+                    <li>Pass <input size="10" value="86753099"/></li>
+
+
+                </ul>
+
+
+
+
+            </div>
+            <button type="button" class="btn btn-lg btn-block btn-primary">Save</button>
+        </div>
+
+        <div class="card box-shadow mx-auto" style="width: 18rem;">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Relay Limit</h4>
+            </div>
+            <div class="row">
+            <div class="card-body mx-auto">
+
+
+
+                <ul class="list-unstyled">
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <table>
+                        <tr>
+                            <td class="relay-text">Temp</td>
+                            <td class="temp-input" ><input size="3" value="80"/> </td>
+                        </tr>
+                    </table>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <table>
+                            <tr>
+                                <td class="relay-text"> Co2 </td>
+                                <td class="relay-input"> <input size="3" value="600"/> </td>
+                            </tr>
+                        </table>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <table>
+                            <tr>
+                                <td class="relay-text"> Humidity </td>
+                                <td class="relay-input"> <input size="3" value="45"/> </td>
+                            </tr>
+                        </table>
+                    </li>
+
+
+
+                </ul>
+
+            </div>
+
+        </div>
+            <button type="button" class="btn btn-lg btn-block btn-primary">Save</button>
+        </div>
+
+        <div class="card box-shadow mx-auto" style="width: 18rem;">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Relay Toggle</h4>
+            </div>
+            <div class="row">
+
+
+
+
+                <div class="card-body mx-auto">
+
+
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <table>
+                                <tr>
+                                    <td class="relay-text">Fan</td>
+                                    <td class="relay-input"><input type="checkbox" /></td>
+                                </tr>
+
+                            </table>
+                            <span class="badge badge-primary badge-pill">14</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                            <table>
+                                <tr>
+                                    <td class="relay-text" >Humidity </td>
+                                    <td class="relay-input"> <input type="checkbox" /> </td>
+                                </tr>
+
+                            </table>
+
+                            <span class="badge badge-primary badge-pill">2</span>
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+            <button type="button" class="btn btn-lg btn-block btn-primary">Save</button>
+        </div>
+
+    <footer class="pt-4 my-md-5 pt-md-5 border-top">
+        <div class="row">
+            <div class="col-12 col-md">
+
+            </div>
+            <div class="col-6 col-md">
+
+            </div>
+            <div class="col-6 col-md">
+
+            </div>
+            <div class="col-6 col-md">
+
+            </div>
+        </div>
+    </footer>
+</div>
+
+
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="jquery-slim.min.js"><\/script>
+<script src="popper.min.js"></script>
+<script src="bootstrap.min.js"></script>
+<script src="holder.min.js"></script>
+<script>
+    Holder.addTheme('thumb', {
+        bg: '#55595c',
+        fg: '#eceeef',
+        text: 'Thumbnail'
+    });
+</script>
+</body>
+</html>
