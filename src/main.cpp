@@ -1,47 +1,31 @@
+
+
 #include <Wire.h>
-#include <U8g2lib.h>
 #include <stdio.h>
-#include "Adafruit_SGP30.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <U8g2lib.h>
+#include "Adafruit_SGP30.h"
 #include "FS.h"
 #include <pu2clr_pcf8574.h>
 #include <string.h>
-
-
-PCF pcf;
-
-ESP8266WebServer server(80);
-
-using namespace std;
-
 #include "DHT.h"
+#include "sendHTMLh"
+#include "menuState.h"
+#include "allMenuDisplay.h"
+#include "webActions.h"
 
 #define DHTTYPE DHT22
-
-// Set WiFi credentials
-//#define WIFI_SSID "KidsWifi"
-//#define WIFI_PASS "xxyy123456"
-
-// Set WiFi credentials
 #define AP_SSID "mush-room"
 #define AP_PASS "8675309"
 
-
-Adafruit_SGP30 sgp;
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
-
-const char* ssid = "mush-room";
-const char* pass = "86753099";
-
-//const char* wifi_ssid = "KidsWifi";
-//const char* wifi_pass = "xxyy123456";
+using namespace std;
 
 vector <String> wifi_data;
 vector <String> ap_data;
 vector <String> limit_data;
 
-uint8_t history[1024];
+
 
 uint8_t data1;
 uint8_t data2;
@@ -68,55 +52,18 @@ void jqueryFull();
 void popper();
 void bootstrapmin();
 void updateSensor();
+<<<<<<< HEAD
 void handle_disableWifi();
-
-
-
-
-
-// const char COPYRIGHT_SYMBOL[] = { 0xa9, '\0' };
-void u8g2_prepare() {
-u8g2.setFont(u8g2_font_helvB18_tf); u8g2.setFontRefHeightExtendedText(); u8g2.setDrawColor(1); u8g2.setFontPosTop(); u8g2.setFontDirection(0);
-}
-
-char *menuDisplay[] = {"one", "two", "three"};
-char *charSet[]= {"A", "B", "C"};
-
-//char *menuDisplay[] = {};
-
-/* return absolute humidity [mg/m^3] with approximation formula
-* @param temperature [°C]
-* @param humidity [%RH]
-*/
-uint8_t DHTPin = D6; 
-DHT dht(DHTPin, DHTTYPE); 
-//const int Push_button_1 = 13;
-
-uint8_t Push_button_2 = D5;
-uint8_t Push_button_1 = D6;
-uint8_t Push_button_3 = D7;
-
-uint8_t Relay1 = D8;
-
+=======
+void displayMenu();
+>>>>>>> 81c419ccdce815b0dec02d5ed74b66681f81e9d4
 
 int loopTime = 1000;
 bool displayed = 0;
-
-int menu_state = 0;
-int menuSize = 0 ;
-int charCount = 65;
-int totalChars = 0;
-
 String state_menu = "sensor_data";
-String stateMenu = "sensor_data";
-
 char wifi_sid[10];
 String wifi_pw = "";
 char wifi_sid_add[0];
-
-float Temperature;
-float Humidity;
-
 int alert_temp = 85;
 int alert_co2 = 600;
 int alert_hum = 60;
@@ -128,6 +75,48 @@ int relay_hum = 50;
 bool relay_hum_toggle = 0;
 bool relay_fan_toggle = 0;
 
+String stateMenu = "sensor_data";
+
+char *menuDisplay[] = {"one", "two", "three"};
+
+
+
+char relay_temp_s[3];
+char buff[4];
+char *buff1;
+char asciiChar[0];
+
+int menu_state = 0;
+int menuSize = 0 ;
+int charCount = 65;
+int totalChars = 0;
+
+
+float Temperature;
+float Humidity;
+
+uint8_t DHTPin = D6; 
+DHT dht(DHTPin, DHTTYPE); 
+
+uint8_t Push_button_2 = D5;
+uint8_t Push_button_1 = D6;
+uint8_t Push_button_3 = D7;
+uint8_t Relay1 = D8;
+
+int counter = 0;
+int button_counter = 0;
+
+const char* ssid = "mush-room";
+const char* pass = "86753099";
+
+uint8_t history[1024];
+
+PCF pcf;
+Adafruit_SGP30 sgp;
+
+ESP8266WebServer server(80);
+
+<<<<<<< HEAD
 String warnHTML(String alertText) {
 
   String ptr="<script>\n";
@@ -168,7 +157,13 @@ return ptr;
  
 
 }
+=======
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+>>>>>>> 81c419ccdce815b0dec02d5ed74b66681f81e9d4
 
+void u8g2_prepare(){
+u8g2.setFont(u8g2_font_helvB18_tf); u8g2.setFontRefHeightExtendedText(); u8g2.setDrawColor(1); u8g2.setFontPosTop(); u8g2.setFontDirection(0);
+};
 
 String updateSensorAjax(int Temperature, int Humidity, int co2){
 
@@ -185,6 +180,7 @@ String updateSensorAjax(int Temperature, int Humidity, int co2){
           ptr +="                     %</li>\n";
           ptr +="                </ul>\n";
   return ptr;
+<<<<<<< HEAD
 }
 
 String sendHTML(String form_relay_toggle_fan, vector <String> wifi_data, int Temperature, int Humidity, int co2, vector <String> ap_data) {
@@ -443,10 +439,11 @@ ptr +="    });\n";
 ptr +="</script>\n";
 ptr +="</body>\n";
 ptr +="</html>\n";
+=======
+};
+>>>>>>> 81c419ccdce815b0dec02d5ed74b66681f81e9d4
 
-return ptr;
 
-}
 
 
 
@@ -458,6 +455,7 @@ uint32_t getAbsoluteHumidity(float temperature, float humidity) {
 };
 
 
+<<<<<<< HEAD
 int menuState(uint8_t button, uint8_t button2, uint8_t button3){
 
 char relay_temp_s[3];
@@ -1448,6 +1446,8 @@ void updateOnChange(){
 
 
 
+=======
+>>>>>>> 81c419ccdce815b0dec02d5ed74b66681f81e9d4
 void setup() {
   Serial.begin(115200);
   while (!Serial); 
@@ -1469,6 +1469,7 @@ void setup() {
     Serial.println("Error file system has occured while mounting");
     }else{
   readStoredData();
+   
     }
   
   String active = "on";
@@ -1483,13 +1484,17 @@ void setup() {
   Serial.println(active.length());
   Serial.println(wifi_data[1]);
   Serial.println(wifi_data[2]);
+  if (ap_data[0] == "on" ) {
+    WiFi.softAP(ap_data[1], ap_data[2]);
+  }
+  
   
   if (wifi_data[0] == "on" ) {
     Serial.println("Wifi enabled");
     enableWifi();
   }
-
-   WiFi.softAP(ap_data[1], ap_data[2]);
+  
+   
 
   
 
@@ -1502,7 +1507,7 @@ void setup() {
 
   //WiFi.mode(WIFI_AP);
   
-  server.on("/", handleRoot);
+  server.on("/", handleRoot(server));
   server.on("/submit_page", handleForm);
   server.on("/test", fileindex);
   server.onNotFound(handleNotFound);
@@ -1514,7 +1519,7 @@ void setup() {
   server.on("/popper.min.js", popper);
   server.on("/bootstrap.min.js", bootstrapmin);
   server.on("bootstrap.min.js", bootstrapmin);
-  server.on("/update_sensor",updateSensor);
+  server.on("/update_sensor",updateSensor(server));
 
   server.on("/relay_on", handle_RelayOn);
   server.on("/relay_off", handle_RelayOff);
@@ -1542,8 +1547,7 @@ void setup() {
   //sgp.setIAQBaseline(0x8E68, 0x8F41);  // Will vary for each sensor!
 }
 
-int counter = 0;
-int button_counter = 0;
+
 
 void loop() {
 
@@ -1551,7 +1555,7 @@ void loop() {
 
   server.handleClient();
   
-  
+ 
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1611,13 +1615,12 @@ void loop() {
       
     }
 
-
   
   if (stateMenu != "sensor_data") {
    
    //delay(200);
    
-   displayMenu();
+   displayMenu(&u8g2);
    
 
   }
@@ -1626,30 +1629,7 @@ void loop() {
    displayEnvData();
 
   }
-   
-
-
-
-  // If you have a temperature / humidity sensor, you can set the absolute humidity to enable the humditiy compensation for the air quality signals
-  //float temperature = 22.1; // [°C]
-  //float humidity = 45.2; // [%RH]
-  //sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
-  
-  //Temperature = dht.readTemperature(); // Gets the values of the temperature
-  //Humidity = dht.readHumidity(); // Gets the values of the humidity 
-
-  
-  
-    
-  //u8g2.sendBuffer();
-  //delay(5000);
-  
-  //u8g2.clearBuffer();
-
-  
-  
-
-  
+ 
   counter++;
   if (counter == 300) {
 
@@ -1691,62 +1671,8 @@ void loop() {
   
 }
 
-void updateSensor() {
 
-server.send(200, "text/html", updateSensorAjax(Temperature, Humidity, sgp.eCO2));
-
-}
-
-void handleRoot() {
-  String form_relay_toggle_fan="";
-  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data) );   // Send HTTP status 200 (Ok) and send some text to the browser/client
-  //server.send(200, "text/html", sendHTML1());
-}
-
-void handleNotFound(){
-  server.send(404, "text/plain", "404: Not found"); // Send HTTP status 404 (Not Found) when there's no handler for the URI in the request
-}
-
-void bootstrap(){
-   File file = SPIFFS.open("/bootstrap.min.css", "r"); 
-   size_t sent = server.streamFile(file, "text/css");
-   file.close();
-}
-void jquery(){
-   File file = SPIFFS.open("/jquery.js", "r"); 
-   size_t sent = server.streamFile(file, "application/javascript");
-   file.close();
-}
-void jquerySlim(){
-
-   File file = SPIFFS.open("/jquery-slim.min.js", "r"); 
-   size_t sent = server.streamFile(file, "application/javascript");
-   file.close();
-}
-void jqueryFull(){
-
-  File file = SPIFFS.open("/jquery-full.js", "r"); 
-   size_t sent = server.streamFile(file, "application/javascript");
-   file.close();
-}
-
-
-
-
-void popper(){
-   File file = SPIFFS.open("/popper.min.js", "r"); 
-   size_t sent = server.streamFile(file, "application/javascript");
-}
-
-void bootstrapmin(){
-   File file = SPIFFS.open("/bootstrap.min.js", "r"); 
-   size_t sent = server.streamFile(file, "application/javascript");
-}
-void fileindex(){
-   File file = SPIFFS.open("/index.html", "r"); 
-   size_t sent = server.streamFile(file, "text/html");
-}
-
+<<<<<<< HEAD
 void handle_RelayOn(){
 Serial.println("relay on");
  digitalWrite(Relay1, HIGH);
@@ -1904,6 +1830,8 @@ void handleForm() {
 
   
 }
+=======
+>>>>>>> 81c419ccdce815b0dec02d5ed74b66681f81e9d4
 
 
 
@@ -2003,7 +1931,7 @@ void writeStoredApData(){
     ap_data[0].replace("\r","");
     ap_data[1].replace("\r","");
     ap_data[2].replace("\r","");
-    //enableWifi();
+    
    
 
 }
@@ -2080,6 +2008,10 @@ void readStoredData(){
     ap_data[1].replace("\r","");
     ap_data[2].replace("\r","");
 
+    ap_data[0].replace("\r","");
+    ap_data[1].replace("\r","");
+    ap_data[2].replace("\r","");
+
 
     //read limit data
     
@@ -2126,6 +2058,7 @@ void enableWifi(){
   Serial.println();
   Serial.print("Connected to WIFI ");
   Serial.println(WiFi.localIP());
+ 
 
 }
 
@@ -2138,8 +2071,6 @@ void readTemp(){
   Serial.println((int)Temperature);
   Serial.println((int)Temperature * 1.8 + 32);
   Temperature = Temperature * 1.8 +32;
-
-
 }
   
   
