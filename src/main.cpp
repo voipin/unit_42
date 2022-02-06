@@ -68,6 +68,8 @@ void jqueryFull();
 void popper();
 void bootstrapmin();
 void updateSensor();
+void slide();
+void jsRelayControl();
 
 
 
@@ -200,7 +202,7 @@ ptr +="    \n";
 ptr +="    <!-- Bootstrap core CSS -->\n";
 ptr +="    <link href=\"bootstrap.min.css\" rel=\"stylesheet\">\n";
 ptr +="    <!-- Custom styles for this template -->\n";
-ptr +="    <link href=\"pricing.css\" rel=\"stylesheet\">\n";
+ptr +="    <link href=\"slide.css\" rel=\"stylesheet\">\n";
 ptr +="</head>\n";
 ptr +="<body>\n";
 ptr +="<style>\n";
@@ -237,6 +239,7 @@ ptr +="        margin-left: 10px;\n";
 ptr +="    }\n";
 ptr +="</style>\n";
 ptr +="<script src=\"jquery1.js\"></script>\n";
+ptr +="<script src=\"relay_control.js\"></script>\n";
 ptr +="<script>";
 
 ptr +="var intervalID = setInterval(function() {";
@@ -246,6 +249,7 @@ ptr +="            console.log(\"update sensors\");";
 
 ptr +="    }, 5000);";
 ptr +="</script>";
+
 
 
 ptr +="<div class=\"form-group\">\n";
@@ -281,9 +285,9 @@ ptr +="            </div>\n";
 ptr +="            <div class=\"card-body mx-auto\"\">\n";
 ptr +="                <ul class=\"list-unstyled\">\n";
     if (wifi_data[0] == "on") {
-        ptr +=" <li class=\"li-more-margin\">Enable Local Network : <input name=\"cl_active\" type=\"checkbox\"/ checked></li>\n";
+        ptr +=" <li class=\"li-more-margin\">Enable Local Network : <label class=\"switch\"> <input name=\"cl_active\" type=\"checkbox\"/ checked>  <span class=\"slider round\"></span> </label> </li>\n";
          }else {
-        ptr +="                    <li class=\"li-more-margin\">Enable Local Network : <input name=\"cl_active\" type=\"checkbox\"/></li>\n";
+        ptr +="                    <li class=\"li-more-margin\">Enable Local Network : <label class=\"switch\"> <input name=\"cl_active\" type=\"checkbox\"/> <span class=\"slider round\"></span> </label> </li>\n";
         }
 ptr +="                    <li>SSID <input value=\"";
 ptr += wifi_data[1];
@@ -295,9 +299,9 @@ ptr += "\" name=\"cl_pass\" size=\"10\"/></li>\n";
 ptr +="                </ul>\n";
 ptr +="                <ul class=\"list-unstyled\">\n";
 if (ap_data[0] == "on") {
-ptr +="                    <li class=\"li-more-margin\">Enable AP Network : <input class=\"c\" name=\"ap_active\" type=\"checkbox\"/ checked></li>\n";
+ptr +="                    <li class=\"li-more-margin\">Enable AP Network :  <label class=\"switch\"><input class=\"c\" name=\"ap_active\" type=\"checkbox\"/ checked><span class=\"slider round\"></span></li>\n";
 }else{
-ptr +="                    <li class=\"li-more-margin\">Enable AP Network : <input class=\"c\" name=\"ap_active\" type=\"checkbox\"/ ></li>\n";
+ptr +="                    <li class=\"li-more-margin\">Enable AP Network : <label class=\"switch\"><input class=\"c\" name=\"ap_active\" type=\"checkbox\"/ ><span class=\"slider round\"></span></li>\n";
 }
 ptr +="                    <li>SSID <input value=\"";
 ptr +=ap_data[1];
@@ -372,11 +376,11 @@ ptr +="                            <table>\n";
 ptr +="                                <tr>\n";
 ptr +="                                    <td class=\"relay-text\">Fan</td>\n";
 if (form_relay_toggle_fan == "on"){
-  ptr +="                                    <td class=\"relay-input\"><input value=\"on\" name=\"relay_toggle_fan\" type=\"checkbox\" checked/></td>\n";
+  ptr +="                                    <td class=\"relay-input\"><label class=\"switch\"><input id=\"fan\" value=\"on\" name=\"relay_toggle_fan\" type=\"checkbox\" checked/><span class=\"slider round\"></span></td>\n";
 
   }else
   {
-    ptr +="                                    <td class=\"relay-input\"> <input name=\"relay_toggle_fan\" type=\"checkbox\" /></td>\n";
+    ptr +="                                    <td class=\"relay-input\"> <label class=\"switch\"><input id=\"fan\" name=\"relay_toggle_fan\" type=\"checkbox\" /><span class=\"slider round\"></span></td>\n";
     }
 
 ptr +="                                </tr>\n";
@@ -389,7 +393,7 @@ ptr +="                        <li class=\"list-group-item d-flex justify-conten
 ptr +="                            <table>\n";
 ptr +="                                <tr>\n";
 ptr +="                                    <td class=\"relay-text\" >Humidity </td>\n";
-ptr +="                                    <td class=\"relay-input\"> <input name=\"relay_toggle_hum\" type=\"checkbox\" /> </td>\n";
+ptr +="                                    <td class=\"relay-input\"> <label class=\"switch\"><input id=\"humidity\" name=\"relay_toggle_hum\" type=\"checkbox\" /> <span class=\"slider round\"></span></td>\n";
 ptr +="                                </tr>\n";
 
 ptr +="                            </table>\n";
@@ -402,9 +406,10 @@ ptr +="                    </ul>\n";
 ptr +="                </div>\n";
 
 ptr +="            </div>\n";
-ptr +="            <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
+
 ptr +="        </div>\n";
 ptr +="</form>\n";
+ptr += " <div id=\"fan_action\" hidden ></div>";
 ptr +="    <footer class=\"pt-4 my-md-5 pt-md-5 border-top\">\n";
 ptr +="        <div class=\"row\">\n";
 ptr +="            <div class=\"col-12 col-md\">\n";
@@ -1479,14 +1484,18 @@ void setup() {
   server.on("/jquery1.js", jquery);
   server.on("/jquery2.min.js", jqueryFull);
   server.on("/jquery3.min.js", jquerySlim);
+  server.on("/relay_control.js", jsRelayControl);
   server.on("bootstrap.min.css", bootstrap);
   server.on("/popper.min.js", popper);
   server.on("/bootstrap.min.js", bootstrapmin);
   server.on("bootstrap.min.js", bootstrapmin);
+  server.on("/slide.css", slide);
   server.on("/update_sensor",updateSensor);
 
   server.on("/relay_on", handle_RelayOn);
   server.on("/relay_off", handle_RelayOff);
+  server.on("/fan_relay_on", handle_RelayOn);
+  server.on("/fan_relay_off", handle_RelayOff);
 
 
 
@@ -1687,6 +1696,16 @@ void jquerySlim(){
 void jqueryFull(){
 
   File file = SPIFFS.open("/jquery-full.js", "r"); 
+   size_t sent = server.streamFile(file, "application/javascript");
+   file.close();
+}
+void slide(){
+   File file = SPIFFS.open("/slide.css", "r"); 
+   size_t sent = server.streamFile(file, "text/css");
+   file.close();
+}
+void jsRelayControl(){
+   File file = SPIFFS.open("/relay_control.js", "r"); 
    size_t sent = server.streamFile(file, "application/javascript");
    file.close();
 }
