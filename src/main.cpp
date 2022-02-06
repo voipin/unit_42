@@ -127,7 +127,46 @@ int relay_hum = 50;
 bool relay_hum_toggle = 0;
 bool relay_fan_toggle = 0;
 
+String warnHTML(String alertText) {
 
+  String ptr="<script>\n";
+  ptr += "alert( \" ";
+  ptr += alertText;
+  ptr += " \") \n ";
+  ptr += "window.location =\"/\"";
+  ptr += "</script>\n";
+
+  return ptr;
+}
+
+String choiceHTML(String alertText,String choice1, String choice2) {
+
+String ptr="<!DOCTYPE html><script>\n";
+ptr += "function onLoad() {\n";
+ptr += "console.log(\"----no wireless configurations----\");\n";
+ptr += " result = getConfirmation(\"";
+ptr += alertText;
+ptr += "\");\n";
+ptr += "function getConfirmation(message) {\n";
+ptr += "var retVal = confirm(message);\n";
+ptr += " if (retVal == true) {\n";
+ptr += "window.location=\"/";
+ptr += choice1;
+ptr += "\";\n";
+ptr += " } else {\n";
+ptr += "window.location=\"/";
+ptr += choice2;
+ptr += "\"; \n";
+ptr += "}\n";
+ptr += "}\n";
+ptr += "}\n";
+ptr += "onLoad();\n";
+ptr +="</script>";
+
+return ptr;
+ 
+
+}
 
 String updateSensorAjax(int Temperature, int Humidity, int co2){
 
@@ -156,7 +195,7 @@ ptr +="    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1
 ptr +="    <meta name=\"description\" content=\"\">\n";
 ptr +="    <meta name=\"author\" content=\"\">\n";
 ptr +="    <link rel=\"icon\" href=\"/docs/4.0/assets/img/favicons/favicon.ico\">\n";
-ptr +="    <title>Pricing example for Bootstrap</title>\n";
+ptr +="    <title>Unit 42</title>\n";
 ptr +="    \n";
 ptr +="    <!-- Bootstrap core CSS -->\n";
 ptr +="    <link href=\"bootstrap.min.css\" rel=\"stylesheet\">\n";
@@ -1681,6 +1720,8 @@ void handle_RelayOff(){
 
 void handleForm() {
 
+  bool resetFlag=false;
+
   Serial.println("handleForm"); 
 
    String form_ap_pass = server.arg("ap_pass");
@@ -1705,38 +1746,85 @@ void handleForm() {
   Serial.println(form_relay_toggle_hum);
   Serial.println(form_relay_toggle_fan);
 
-  if (form_cl_active !=wifi_data[0] || form_cl_ssid != wifi_data[1] || form_cl_pass !=wifi_data[2]){
-
-      wifi_data[0] = form_cl_active;
-      wifi_data[1] = form_cl_ssid;
-      wifi_data[2] = form_cl_pass;
-      
-      writeStoredWifiData();
-      
-
-   }
-   if (form_ap_active != ap_data[0] || form_ap_ssid != ap_data[1] || form_ap_pass != ap_data[2]){
-
-      ap_data[0] = form_cl_active;
-      ap_data[1] = form_cl_ssid;
-      ap_data[2] = form_cl_pass;
-      
-      writeStoredApData();     
-   }
+  if(form_ap_active != "on" && form_cl_active != "on")
    
-   // no form of wifi is active, probabaly a bad thing
-   if(form_ap_active != "on" && form_cl_active != "on")
    {
 
-    //handle this somehow
+     String alertText = "You are about to remove all wireless access, both ap and client. ";
+     alertText += "You would have to use the manual controls to turn these on again, continue? ";
+
+    server.send(200, "text/html", choiceHTML(alertText,"disableWifi","") );
+
+    return;
     
     }
 
-   if (form_ap_active != ap_data[0] || form_cl_active !=wifi_data[0] )
+   if ( (form_ap_ssid !=ap_data[1] || form_cl_pass !=ap_data[2])  && ap_data[0]=="on")
    {
     
-    ESP.reset();
+    ap_data[0] = form_ap_active;
+    ap_data[1] = form_ap_ssid;
+    ap_data[2] = form_ap_pass;
+    writeStoredApData();
+
+    Serial.println("write stored AP data, reseting");
+
+    resetFlag=true;
+
+    }else { 
+      
+      if (form_ap_active != ap_data[0] || form_ap_ssid != ap_data[1] || form_ap_pass != ap_data[2])
+      
+      {
+      
+      ap_data[0] = form_ap_active;
+      ap_data[1] = form_ap_ssid;
+      ap_data[2] = form_ap_pass;
+      writeStoredApData();
+      
+      }
     }
+
+   if ( (form_cl_ssid !=wifi_data[1] || form_cl_pass !=wifi_data[2]) && wifi_data[0]=="on" )
+   
+   {
+
+    wifi_data[0] = form_cl_active;
+    wifi_data[1] = form_cl_ssid;
+    wifi_data[2] = form_cl_pass; 
+    writeStoredWifiData();
+
+    Serial.println("write stored Wifi data, reseting");
+
+     resetFlag=true;
+
+   }else {
+
+    if (form_cl_active !=wifi_data[0] || form_cl_ssid != wifi_data[1] || form_cl_pass !=wifi_data[2])
+    {
+
+
+    wifi_data[0] = form_cl_active;
+    wifi_data[1] = form_cl_ssid;
+    wifi_data[2] = form_cl_pass;
+    writeStoredWifiData();}
+
+   };
+
+   if (resetFlag){
+
+     //check for wifi station connection
+     //check for connection to wifi client
+     
+     String alertText = "Don't Panic! You have changed the wireless connectivity and may need to reconnect.";
+     alertText += " The new information for connecting to Unit 42 is displayed on the front of the device.";
+     
+     server.send(200, "text/html", warnHTML(alertText) );
+
+     delay(1000);
+
+     ESP.reset();
+   }
   
 
   if (form_relay_toggle_fan == "on")
