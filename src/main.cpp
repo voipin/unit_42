@@ -1730,11 +1730,13 @@ void fileindex(){
 void handle_RelayOn(){
 Serial.println("relay on");
  digitalWrite(Relay1, HIGH);
+ server.send(200, "text/html", "relay_on");
 };
 
 void handle_RelayOff(){
   Serial.println("relay off");
  digitalWrite(Relay1, LOW);
+ server.send(200, "text/html", "relay_off");
 };
 
 void handleForm() {
@@ -1778,7 +1780,11 @@ void handleForm() {
     
     }
 
-   if ( (form_ap_ssid !=ap_data[1] || form_cl_pass !=ap_data[2])  && ap_data[0]=="on")
+   
+
+   // if (  ((form_ap_ssid !=ap_data[1] || form_ap_pass !=ap_data[2] ) && ap_data[0] == "on") || form_ap_active !=ap_data[0])
+
+   if ( ( (form_ap_ssid !=ap_data[1] || form_ap_pass !=ap_data[2] ) && ap_data[0] == "on") || form_ap_active !=ap_data[0])
    {
     
     ap_data[0] = form_ap_active;
@@ -1790,21 +1796,17 @@ void handleForm() {
 
     resetFlag=true;
 
-    }else { 
-      
-      if (form_ap_active != ap_data[0] || form_ap_ssid != ap_data[1] || form_ap_pass != ap_data[2])
-      
-      {
-      
+   }else if( (form_ap_ssid !=ap_data[1] || form_ap_pass !=ap_data[2] ) ) {
+
       ap_data[0] = form_ap_active;
       ap_data[1] = form_ap_ssid;
       ap_data[2] = form_ap_pass;
       writeStoredApData();
-      
-      }
-    }
 
-   if ( (form_cl_ssid !=wifi_data[1] || form_cl_pass !=wifi_data[2]) && wifi_data[0]=="on" )
+    Serial.println("write stored AP data, no reset");
+   }
+
+    if ( ( (form_cl_ssid !=wifi_data[1] || form_cl_pass !=wifi_data[2] ) && wifi_data[0] == "on") || form_cl_active !=wifi_data[0])
    
    {
 
@@ -1817,7 +1819,7 @@ void handleForm() {
 
      resetFlag=true;
 
-   }else {
+   }else if( (form_cl_ssid !=wifi_data[1] || form_cl_pass !=wifi_data[2] ) ) {
 
     if (form_cl_active !=wifi_data[0] || form_cl_ssid != wifi_data[1] || form_cl_pass !=wifi_data[2])
     {
@@ -1827,6 +1829,7 @@ void handleForm() {
     wifi_data[1] = form_cl_ssid;
     wifi_data[2] = form_cl_pass;
     writeStoredWifiData();}
+    Serial.println("write stored Wifi data, no reset");
 
    };
 
@@ -2033,6 +2036,10 @@ void readStoredData(){
     Serial.println(s);
     
     }
+
+      ap_data[0].replace("\r","");
+      ap_data[1].replace("\r","");
+      ap_data[2].replace("\r","");
 
 
     //read limit data
