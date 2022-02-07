@@ -70,6 +70,8 @@ void bootstrapmin();
 void updateSensor();
 void slide();
 void jsRelayControl();
+void timeTrack();
+void clockSet(String clockData);
 
 
 
@@ -126,8 +128,28 @@ int relay_temp = 85;
 int relay_co2 = 600;
 int relay_hum = 50;
 
+
 bool relay_hum_toggle = 0;
 bool relay_fan_toggle = 0;
+
+//time keeping variables
+unsigned long timeNow = 0;
+unsigned long timeLast = 0;
+
+
+int startingHour = 18; // set your starting hour here, not below at int hour. This ensures accurate daily correction of time
+
+int seconds = 0;
+int minutes = 5;
+int hours = startingHour;
+int days = 0;
+
+//time accuracy settings
+
+int dailyErrorFast = 0; // set the average number of milliseconds your microcontroller's time is fast on a daily basis
+int dailyErrorBehind = 0; // set the average number of milliseconds your microcontroller's time is behind on a daily basis
+
+int correctedToday = 1; // do not change this variable, one means that the time has already been corrected today for the error in your boards crystal. This is true for the first day because you just set the time when you uploaded the sketch.  
 
 String warnHTML(String alertText) {
 
@@ -172,6 +194,8 @@ return ptr;
 
 String updateSensorAjax(int Temperature, int Humidity, int co2){
 
+  timeTrack();
+
   String ptr ="<ul class=\"list-inline\" >\n";
  
           ptr +="                    <li>Temp ";
@@ -184,6 +208,12 @@ String updateSensorAjax(int Temperature, int Humidity, int co2){
           ptr += Humidity;
           ptr +="                     %</li>\n";
           ptr +="                </ul>\n";
+          ptr +="<li> Time ";
+          ptr +=hours;
+          ptr +=" : ";
+          ptr +=minutes;
+          ptr +=" : ";
+          ptr +=seconds;
   return ptr;
 }
 
@@ -278,6 +308,23 @@ ptr +="                     %</li>\n";
 ptr +="                </ul>\n";
 ptr +="            </div>\n";
 ptr +="        </div>\n";
+ptr +="         <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\"> \n";
+ptr +="         <div class=\"card-header\"> \n";
+ptr +="         <h4 class=\"my-0 font-weight-normal\">Set Clock</h4> \n";
+ptr +="         </div>\n";
+ptr +="         <div class=\"card-body mx-auto\"> \n";
+ptr +="         <input name=\"clock\" type=\"time\" value=\"08:56:33\">\n";
+
+ptr +="          </div> \n";
+ptr +="            <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Set Clock</button>\n";
+
+ptr +="           </div> \n";
+
+
+
+
+
+
 ptr +="        <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\" >\n";
 ptr +="            <div class=\"card-header\">\n";
 ptr +="                <h4 class=\"my-0 font-weight-normal\">Wifi</h4>\n";
@@ -1520,8 +1567,6 @@ void loop() {
   
 
   server.handleClient();
-  
-  
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1597,27 +1642,6 @@ void loop() {
 
   }
    
-
-
-
-  // If you have a temperature / humidity sensor, you can set the absolute humidity to enable the humditiy compensation for the air quality signals
-  //float temperature = 22.1; // [°C]
-  //float humidity = 45.2; // [%RH]
-  //sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
-  
-  //Temperature = dht.readTemperature(); // Gets the values of the temperature
-  //Humidity = dht.readHumidity(); // Gets the values of the humidity 
-
-  
-  
-    
-  //u8g2.sendBuffer();
-  //delay(5000);
-  
-  //u8g2.clearBuffer();
-
-  
-  
 
   
   counter++;
@@ -1756,6 +1780,7 @@ void handleForm() {
    String form_relay_limit_co2 = server.arg("relay_limit_co2");
    String form_relay_toggle_fan = server.arg("relay_toggle_fan");
    String form_relay_toggle_hum = server.arg("relay_limit_hum");
+   String form_clock_set = server.arg("clock");
 
   Serial.println(form_ap_active);
   Serial.println(form_ap_pass);
@@ -1766,6 +1791,9 @@ void handleForm() {
   Serial.println(form_relay_limit_co2);
   Serial.println(form_relay_toggle_hum);
   Serial.println(form_relay_toggle_fan);
+  Serial.println(form_clock_set);
+
+  clockSet(form_clock_set);
 
   if(form_ap_active != "on" && form_cl_active != "on")
    
@@ -1849,14 +1877,7 @@ void handleForm() {
    }
   
 
-  if (form_relay_toggle_fan == "on")
-  {
-    handle_RelayOn();
-    }
-    else
-    {
-      handle_RelayOff();
-      }
+  
     
   server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data) );
   
@@ -2099,6 +2120,74 @@ void readTemp(){
   Serial.println((int)Temperature);
   Serial.println((int)Temperature * 1.8 + 32);
   Temperature = Temperature * 1.8 +32;
+
+
+}
+
+void timeTrack() {
+
+timeNow = millis()/1000; // the number of milliseconds that have passed since boot
+seconds = timeNow - timeLast;//the number of seconds that have passed since the last time 60 seconds was reached.
+
+  
+
+if (seconds == 60) {
+  timeLast = timeNow;
+  minutes = minutes + 1;
+}
+
+//if one minute has passed, start counting milliseconds from zero again and add one minute to the clock.
+
+if (minutes == 60){ 
+  minutes = 0;
+  hours = hours + 1;
+}
+
+// if one hour has passed, start counting minutes from zero and add one hour to the clock
+
+if (hours == 24){
+  hours = 0;
+  days = days + 1;
+  }
+
+  //if 24 hours have passed , add one day
+
+if (hours ==(24 - startingHour) && correctedToday == 0){
+  delay(dailyErrorFast*1000);
+  seconds = seconds + dailyErrorBehind;
+  correctedToday = 1;
+}
+
+//every time 24 hours have passed since the initial starting time and it has not been reset this day before, add milliseconds or delay the progran with some milliseconds. 
+//Change these varialbes according to the error of your board. 
+// The only way to find out how far off your boards internal clock is, is by uploading this sketch at exactly the same time as the real time, letting it run for a few days 
+// and then determine how many seconds slow/fast your boards internal clock is on a daily average. (24 hours).
+
+if (hours == 24 - startingHour + 2) { 
+  correctedToday = 0;
+}
+
+}
+
+void clockSet(String clockData) {
+
+  String string_hours, string_minutes, string_seconds;
+
+  int change_hours =  clockData.indexOf(':') ;
+  int change_minutes = clockData.indexOf(':', change_hours+1) ;
+  int change_seconds = clockData.indexOf(':', change_minutes+1) ;
+
+  string_hours = clockData.substring(0, 2);
+  string_minutes = clockData.substring(3, 5);
+  string_seconds = clockData.substring(6, 8);
+  
+  Serial.println("clock data set");
+  Serial.println(string_hours);
+  Serial.println(string_minutes);
+  Serial.println(string_seconds);
+
+
+
 
 
 }
