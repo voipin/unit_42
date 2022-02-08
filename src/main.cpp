@@ -40,6 +40,7 @@ const char* pass = "86753099";
 vector <String> wifi_data;
 vector <String> ap_data;
 vector <String> limit_data;
+vector <String> time_data;
 
 uint8_t history[1024];
 
@@ -71,7 +72,8 @@ void updateSensor();
 void slide();
 void jsRelayControl();
 void timeTrack();
-void clockSet(String clockData);
+String clockSet(String clockData);
+String clockOutput();
 
 
 
@@ -144,6 +146,8 @@ int minutes = 5;
 int hours = startingHour;
 int days = 0;
 
+String tz;
+
 //time accuracy settings
 
 int dailyErrorFast = 0; // set the average number of milliseconds your microcontroller's time is fast on a daily basis
@@ -195,6 +199,7 @@ return ptr;
 String updateSensorAjax(int Temperature, int Humidity, int co2){
 
   timeTrack();
+  String new_time = clockOutput();
 
   String ptr ="<ul class=\"list-inline\" >\n";
  
@@ -209,15 +214,11 @@ String updateSensorAjax(int Temperature, int Humidity, int co2){
           ptr +="                     %</li>\n";
           ptr +="                </ul>\n";
           ptr +="<li> Time ";
-          ptr +=hours;
-          ptr +=" : ";
-          ptr +=minutes;
-          ptr +=" : ";
-          ptr +=seconds;
+          ptr +=new_time;
   return ptr;
 }
 
-String sendHTML(String form_relay_toggle_fan, vector <String> wifi_data, int Temperature, int Humidity, int co2, vector <String> ap_data) {
+String sendHTML(String form_relay_toggle_fan, vector <String> wifi_data, int Temperature, int Humidity, int co2, vector <String> ap_data, String new_time, String tz) {
 
 String ptr ="<!doctype html>\n";
 ptr +="<html lang=\"en\">\n";
@@ -236,6 +237,9 @@ ptr +="    <link href=\"slide.css\" rel=\"stylesheet\">\n";
 ptr +="</head>\n";
 ptr +="<body>\n";
 ptr +="<style>\n";
+ptr +="time {\n";
+ptr +="        margin: 10px ; \n";
+ptr +="    }\n";
 ptr +="    table {\n";
 ptr +="        width:100%;\n";
 ptr +="    }\n";
@@ -313,18 +317,25 @@ ptr +="         <div class=\"card-header\"> \n";
 ptr +="         <h4 class=\"my-0 font-weight-normal\">Set Clock</h4> \n";
 ptr +="         </div>\n";
 ptr +="         <div class=\"card-body mx-auto\"> \n";
-ptr +="         <input name=\"clock\" type=\"time\" value=\"08:56:33\">\n";
+ptr +="         <input name=\"clock\" type=\"time\" value=\"";
+ptr += new_time;
+ptr +="\"> ";
 
-ptr +="          </div> \n";
+ptr += "<div class=\"time\" ><label for=\"tz\">TimeZone :</label></div>\n";
+ptr +="                   <select name=\"tz\" id=\"tz\">\n";
+if (tz=="EST"){ptr +="                     <option value=\"est\" selected>EST</option>\n";}
+else {ptr +="                     <option value=\"est\">EST</option>\n";}
+
+ptr +="                     <option value=\"cst\">CST</option>\n";
+ptr +="                     <option value=\"mst\">MST</option>\n";
+if (tz=="PST"){ ptr +="                     <option value=\"pst\" selected>PST</option>\n";}
+else { ptr +="                     <option value=\"pst\">PST</option>\n";}
+ptr +="                     <option value=\"utc\">UTC</option>\n";
+ptr +="                     </select>\n";
+ptr +="               </div>\n";
 ptr +="            <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Set Clock</button>\n";
-
 ptr +="           </div> \n";
-
-
-
-
-
-
+ptr +="           </div> \n";
 ptr +="        <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\" >\n";
 ptr +="            <div class=\"card-header\">\n";
 ptr +="                <h4 class=\"my-0 font-weight-normal\">Wifi</h4>\n";
@@ -1412,6 +1423,9 @@ void displayEnvData(){
   u8g2.setCursor(12,50);
   u8g2.print("Humid :");
   u8g2.print(Humidity);
+  String new_time = clockOutput();
+  u8g2.setCursor(12,60);
+  u8g2.print(new_time);
   //u8g2.sendBuffer();
   //updateOnChange();
   
@@ -1485,6 +1499,7 @@ void setup() {
   
   WiFi.mode(WIFI_AP_STA);
  
+
   
   u8g2.enableUTF8Print();
   //SPIFFS.begin();
@@ -1498,6 +1513,7 @@ void setup() {
   
   Serial.println("Wifi data:");
 
+  
 
   
   Serial.println(wifi_data[0]);
@@ -1512,7 +1528,14 @@ void setup() {
     enableWifi();
   }
 
+  
+
    WiFi.softAP(ap_data[1], ap_data[2]);
+
+  Serial.println("clock time:");
+  String get_time = clockOutput();
+  Serial.println(get_time);
+
 
   server.begin();
     
@@ -1693,7 +1716,10 @@ server.send(200, "text/html", updateSensorAjax(Temperature, Humidity, sgp.eCO2))
 
 void handleRoot() {
   String form_relay_toggle_fan="";
-  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data) );   // Send HTTP status 200 (Ok) and send some text to the browser/client
+  String new_time = clockOutput();
+  //String tz = getTZ();
+  Serial.println(new_time);
+  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data, new_time,tz) );   // Send HTTP status 200 (Ok) and send some text to the browser/client
   //server.send(200, "text/html", sendHTML1());
 }
 
@@ -1781,6 +1807,7 @@ void handleForm() {
    String form_relay_toggle_fan = server.arg("relay_toggle_fan");
    String form_relay_toggle_hum = server.arg("relay_limit_hum");
    String form_clock_set = server.arg("clock");
+   String form_clock_tz = server.arg("tz");
 
   Serial.println(form_ap_active);
   Serial.println(form_ap_pass);
@@ -1793,7 +1820,9 @@ void handleForm() {
   Serial.println(form_relay_toggle_fan);
   Serial.println(form_clock_set);
 
-  clockSet(form_clock_set);
+  String new_time = clockSet(form_clock_set);
+
+  tz = server.arg("tz");
 
   if(form_ap_active != "on" && form_cl_active != "on")
    
@@ -1879,7 +1908,7 @@ void handleForm() {
 
   
     
-  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data) );
+  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data, new_time, tz) );
   
   webUpdate();
 
@@ -2086,11 +2115,41 @@ void readStoredData(){
     
     }
 
+      limit_data[0].replace("\r","");
+      limit_data[1].replace("\r","");
+      limit_data[2].replace("\r","");
+
+    File file3 = SPIFFS.open("/time.txt", "r");
+
+   if (!file3) {
+    Serial.println("failed to open time file for reading");
+    return;
+   }
+   
+
+   while (file3.available()) {
+    time_data.push_back(file3.readStringUntil('\n'));
+    Serial.println("reading time file....");
+    }
+   file3.close();
+
+   for (String s : time_data ) {
     
+    Serial.println(s);
+    
+    }
+
+      time_data[0].replace("\r","");
+      time_data[1].replace("\r","");
+      time_data[2].replace("\r","");
+
+    tz = time_data[0];
+    String current_time;
+    current_time = time_data[1];
+    clockSet(current_time);
 
 
-    
-    
+        
 };
 
 void enableWifi(){
@@ -2169,7 +2228,7 @@ if (hours == 24 - startingHour + 2) {
 
 }
 
-void clockSet(String clockData) {
+String clockSet(String clockData) {
 
   String string_hours, string_minutes, string_seconds;
 
@@ -2186,10 +2245,38 @@ void clockSet(String clockData) {
   Serial.println(string_minutes);
   Serial.println(string_seconds);
 
+  hours = string_hours.toInt();
+  minutes = string_minutes.toInt();
+  seconds = string_seconds.toInt();
 
+  char output_time[8];
 
+  sprintf (output_time,"%02d:%02d:%02d", hours, minutes, seconds);
 
+  Serial.print("time is now:");
+  Serial.println(output_time);
+
+  
+   
+  return output_time;
+}
+
+String clockOutput(){
+
+char output_time[8];
+
+  sprintf (output_time,"%02d:%02d:%02d", hours, minutes, seconds);
+
+  return output_time;
 
 }
+
+
+
+
+
+
+
+
   
   
