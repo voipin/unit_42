@@ -324,12 +324,12 @@ ptr +="\"> ";
 
 ptr += "<div class=\"time\" ><label for=\"tz\">TimeZone :</label></div>\n";
 ptr +="                   <select name=\"tz\" id=\"tz\">\n";
-if (tz=="EST"){ptr +="                     <option value=\"est\" selected>EST</option>\n";}
+if (tz=="est"){ptr +="                     <option value=\"est\" selected>EST</option>\n";}
 else {ptr +="                     <option value=\"est\">EST</option>\n";}
 
 ptr +="                     <option value=\"cst\">CST</option>\n";
 ptr +="                     <option value=\"mst\">MST</option>\n";
-if (tz=="PST"){ ptr +="                     <option value=\"pst\" selected>PST</option>\n";}
+if (tz=="pst"){ ptr +="                     <option value=\"pst\" selected>PST</option>\n";}
 else { ptr +="                     <option value=\"pst\">PST</option>\n";}
 ptr +="                     <option value=\"utc\">UTC</option>\n";
 ptr +="                     </select>\n";
@@ -1589,7 +1589,7 @@ int button_counter = 0;
 void loop() {
 
   
-
+  timeTrack();
   server.handleClient();
 
   data1 = pcf.digitalRead(4);
@@ -1824,6 +1824,7 @@ void handleForm() {
   String new_time = clockSet(form_clock_set);
 
   tz = server.arg("tz");
+  time_data[0]=tz;
 
   writeStoredTimeData();
 
