@@ -72,6 +72,7 @@ void updateSensor();
 void slide();
 void jsRelayControl();
 void timeTrack();
+void writeStoredTimeData();
 String clockSet(String clockData);
 String clockOutput();
 
@@ -1824,6 +1825,8 @@ void handleForm() {
 
   tz = server.arg("tz");
 
+  writeStoredTimeData();
+
   if(form_ap_active != "on" && form_cl_active != "on")
    
    {
@@ -2018,6 +2021,51 @@ void writeStoredApData(){
 
 }
 
+void writeStoredTimeData(){
+
+
+  File file = SPIFFS.open("/time.txt", "w");
+  if (!file) {
+    Serial.println("time.txt failed to open file for writing");
+    return;
+   }
+   
+  file.println(time_data[0]);
+  file.println(time_data[1]);
+ 
+  Serial.println("time data stored");
+  Serial.println('\n');
+   Serial.println("**********************");
+   Serial.println("*                    *");
+   Serial.println("*  time file verify  *");
+   Serial.println("*                    *");
+   Serial.println("**********************");
+   Serial.println('\n');
+   Serial.println("Contents:");
+
+
+  
+  while (file.available()) {
+    time_data.push_back(file.readStringUntil('\n'));
+    Serial.println("validating time file....");
+    }
+   file.close();
+
+   
+
+   for (String s : time_data ) {
+    
+    Serial.println(s);
+    
+    }
+    time_data[0].replace("\r","");
+    time_data[1].replace("\r","");
+    
+    //enableWifi();
+   
+
+}
+
 
 
 
@@ -2141,7 +2189,7 @@ void readStoredData(){
 
       time_data[0].replace("\r","");
       time_data[1].replace("\r","");
-      time_data[2].replace("\r","");
+     
 
     tz = time_data[0];
     String current_time;
@@ -2255,7 +2303,7 @@ String clockSet(String clockData) {
 
   Serial.print("time is now:");
   Serial.println(output_time);
-
+  time_data[1] = output_time;
   
    
   return output_time;
