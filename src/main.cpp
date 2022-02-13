@@ -73,6 +73,7 @@ void slide();
 void jsRelayControl();
 void timeTrack();
 void writeStoredTimeData();
+void jsWindowLoad();
 String clockSet(String clockData);
 String clockOutput();
 
@@ -275,6 +276,7 @@ ptr +="    }\n";
 ptr +="</style>\n";
 ptr +="<script src=\"jquery1.js\"></script>\n";
 ptr +="<script src=\"relay_control.js\"></script>\n";
+ptr +="<script src=\"window_load.js\"></script>\n";
 ptr +="<script>";
 
 ptr +="var intervalID = setInterval(function() {";
@@ -283,12 +285,18 @@ ptr +="            $(\"#sensor_update\").load(\"update_sensor\");";
 ptr +="            console.log(\"update sensors\");";
 
 ptr +="    }, 5000);";
+
+
+
+
+
 ptr +="</script>";
 
 
 
 ptr +="<div class=\"form-group\">\n";
-ptr +="<form class=\"form-group\" action=\"/submit_page\">\n";
+ptr +="<form id=\"control_form\" class=\"form-group\" action=\"/submit_page\">\n";
+ptr +="<input name=\"clockset\" type=\"hidden\" id=\"clockset\" value=0 >\"\n";
 ptr +="<div class=\"pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center\">\n";
 ptr +="    <h1 class=\"display-4\">Control</h1>\n";
 ptr +="    <p class=\"lead\">Control all systems</p>\n";
@@ -313,6 +321,7 @@ ptr +="                     %</li>\n";
 ptr +="                </ul>\n";
 ptr +="            </div>\n";
 ptr +="        </div>\n";
+//start set clock
 ptr +="         <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\"> \n";
 ptr +="         <div class=\"card-header\"> \n";
 ptr +="         <h4 class=\"my-0 font-weight-normal\">Set Clock</h4> \n";
@@ -333,10 +342,14 @@ if (tz=="pst"){ ptr +="                     <option value=\"pst\" selected>PST</
 else { ptr +="                     <option value=\"pst\">PST</option>\n";}
 ptr +="                     <option value=\"utc\">UTC</option>\n";
 ptr +="                     </select>\n";
+ptr +="  <div class=\"time\"> \n";
+ptr +="            <button type=\"button\" onclick=\"clockSet()\" class=\"btn btn-lg btn-block btn-primary\">Set Clock</button></div>\n";
 ptr +="               </div>\n";
-ptr +="            <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Set Clock</button>\n";
+
 ptr +="           </div> \n";
-ptr +="           </div> \n";
+// end set clock
+
+//wifi setup
 ptr +="        <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\" >\n";
 ptr +="            <div class=\"card-header\">\n";
 ptr +="                <h4 class=\"my-0 font-weight-normal\">Wifi</h4>\n";
@@ -370,9 +383,31 @@ ptr +="                    <li>Pass <input value=\"";
 ptr +=ap_data[2];
 ptr += "\" name=\"ap_pass\" size=\"10\"/></li>\n";               
 ptr +="                </ul>\n";
-ptr +="            </div>\n";
 ptr +="            <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
+ptr +="            </div>\n";
 ptr +="        </div>\n";
+// wifi setup
+
+// light setup
+ptr +="  <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\">\n";
+ptr +="              <div class=\"card-header\">\n";
+ptr +="               <h4 class=\"my-0 font-weight-normal\">Light</h4>\n";
+ptr +="              </div>\n";
+ptr +="              <div class=\"card-body mx-auto time\">\n";
+ptr +="                  <div class=\"time\" >Light on<input type=\"time\" value=\"08:56:33\"></div>\n";
+ptr +="                  <div class=\"time\" >Light off<input type=\"time\" value=\"08:56:33\"></div>\n";
+ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input type=\"checkbox\" ><span class=\"slider round\"></span> </label></div>\n";
+
+
+ptr +="                  <button type=\"button\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
+ptr +="            </div>\n";
+
+ptr +="          </div>\n";
+//end light setup
+
+
+
+
 ptr +="        <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\">\n";
 ptr +="            <div class=\"card-header\">\n";
 ptr +="                <h4 class=\"my-0 font-weight-normal\">Relay Limit</h4>\n";
@@ -1556,6 +1591,7 @@ void setup() {
   server.on("/jquery2.min.js", jqueryFull);
   server.on("/jquery3.min.js", jquerySlim);
   server.on("/relay_control.js", jsRelayControl);
+  server.on("/window_load.js", jsWindowLoad);
   server.on("bootstrap.min.css", bootstrap);
   server.on("/popper.min.js", popper);
   server.on("/bootstrap.min.js", bootstrapmin);
@@ -1760,6 +1796,11 @@ void jsRelayControl(){
    size_t sent = server.streamFile(file, "application/javascript");
    file.close();
 }
+void jsWindowLoad(){
+   File file = SPIFFS.open("/window_load.js", "r"); 
+   size_t sent = server.streamFile(file, "application/javascript");
+   file.close();
+}
 
 
 
@@ -1809,6 +1850,7 @@ void handleForm() {
    String form_relay_toggle_hum = server.arg("relay_limit_hum");
    String form_clock_set = server.arg("clock");
    String form_clock_tz = server.arg("tz");
+   String form_clock_set_bool = server.arg("clockset");
 
   Serial.println(form_ap_active);
   Serial.println(form_ap_pass);
@@ -1826,7 +1868,12 @@ void handleForm() {
   tz = server.arg("tz");
   time_data[0]=tz;
 
-  writeStoredTimeData();
+  if (form_clock_set_bool == "1"){
+    Serial.println("clock set bool is on, setting clock...");
+    writeStoredTimeData();
+  }
+  
+  //writeStoredTimeData();
 
   if(form_ap_active != "on" && form_cl_active != "on")
    
@@ -1912,11 +1959,62 @@ void handleForm() {
 
   
     
-  server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data, new_time, tz) );
+  //server.send(200, "text/html", sendHTML(form_relay_toggle_fan, wifi_data, Temperature, Humidity, sgp.eCO2, ap_data, new_time, tz) );
   
+  server.send(200, "text/html", "<meta http-equiv=\"refresh\" content=\"0; url='./' \" />" );
   webUpdate();
 
   
+}
+
+void writeStoredLimitData(){
+
+
+  File file = SPIFFS.open("/limit.txt", "w");
+  if (!file) {
+    Serial.println("limit.txt failed to open file for writing");
+    return;
+   }
+   
+  file.println(limit_data[0]);
+  file.println(limit_data[1]);
+  file.println(limit_data[2]);
+     
+
+  
+  
+
+  Serial.println("limit data stored");
+  Serial.println('\n');
+   Serial.println("**********************");
+   Serial.println("*                    *");
+   Serial.println("*  limit file verify  *");
+   Serial.println("*                    *");
+   Serial.println("**********************");
+   Serial.println('\n');
+   Serial.println("Contents:");
+
+
+  
+  while (file.available()) {
+    wifi_data.push_back(file.readStringUntil('\n'));
+    Serial.println("validating limit file....");
+    }
+   file.close();
+
+   
+
+   for (String s : limit_data ) {
+    
+    Serial.println(s);
+    
+    }
+    limit_data[0].replace("\r","");
+    limit_data[1].replace("\r","");
+    limit_data[2].replace("\r","");
+   
+   
+
 }
 
 
@@ -2239,10 +2337,12 @@ seconds = timeNow - timeLast;//the number of seconds that have passed since the 
 
   
 
-if (seconds == 60) {
+if (seconds >= 60) {
   timeLast = timeNow;
   minutes = minutes + 1;
 }
+
+
 
 //if one minute has passed, start counting milliseconds from zero again and add one minute to the clock.
 
