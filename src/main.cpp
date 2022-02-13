@@ -73,6 +73,7 @@ void slide();
 void jsRelayControl();
 void timeTrack();
 void writeStoredTimeData();
+void writeStoredLimitData();
 void jsWindowLoad();
 String clockSet(String clockData);
 String clockOutput();
@@ -421,7 +422,9 @@ ptr +="                    <li class=\"list-group-item d-flex justify-content-be
 ptr +="                    <table>\n";
 ptr +="                        <tr>\n";
 ptr +="                            <td class=\"relay-text\">Temp</td>\n";
-ptr +="                            <td class=\"temp-input\" ><input name=\"relay_limit_temp\" size=\"3\" value=\"80\"/> </td>\n";
+ptr +="                            <td class=\"temp-input\" ><input name=\"relay_limit_temp\" size=\"3\" value=\" ";
+ptr += limit_data[0];
+ptr += " \"/> </td>\n";
 ptr +="                        </tr>\n";
 ptr +="                    </table>\n";
 ptr +="                    </li>\n";
@@ -429,7 +432,9 @@ ptr +="                    <li class=\"list-group-item d-flex justify-content-be
 ptr +="                        <table>\n";
 ptr +="                            <tr>\n";
 ptr +="                                <td class=\"relay-text\"> Co2 </td>\n";
-ptr +="                                <td class=\"relay-input\"> <input size=\"3\" name=\"relay_limit_co2\" value=\"600\"/> </td>\n";
+ptr +="                                <td class=\"relay-input\"> <input size=\"3\" name=\"relay_limit_co2\" value=\" ";
+ptr += limit_data[1];
+ptr += "\"/> </td>\n";
 ptr +="                            </tr>\n";
 ptr +="                        </table>\n";
 ptr +="                    </li>\n";
@@ -437,7 +442,9 @@ ptr +="                    <li class=\"list-group-item d-flex justify-content-be
 ptr +="                        <table>\n";
 ptr +="                            <tr>\n";
 ptr +="                                <td class=\"relay-text\"> Humidity </td>\n";
-ptr +="                                <td class=\"relay-input\"> <input name=\"relay_limit_hum\" size=\"3\" value=\"45\"/> </td>\n";
+ptr +="                                <td class=\"relay-input\"> <input name=\"relay_limit_hum\" size=\"3\" value=\" ";
+ptr += limit_data[2];
+ptr += "\"/> </td>\n";
 ptr +="                            </tr>\n";
 ptr +="                        </table>\n";
 ptr +="                    </li>\n";
@@ -1940,6 +1947,15 @@ void handleForm() {
     Serial.println("write stored Wifi data, no reset");
 
    };
+
+
+   //go ahead and write the limit data to the store
+
+   limit_data[0] = form_relay_limit_temp ;
+   limit_data[1] = form_relay_limit_co2 ;
+   limit_data[2] = form_relay_limit_hum ;
+   
+   writeStoredLimitData();
 
    if (resetFlag){
 
