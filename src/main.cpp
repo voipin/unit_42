@@ -41,6 +41,7 @@ vector <String> wifi_data;
 vector <String> ap_data;
 vector <String> limit_data;
 vector <String> time_data;
+vector <String> light_data;
 
 uint8_t history[1024];
 
@@ -50,6 +51,14 @@ uint8_t data3;
 uint8_t data_state1;
 uint8_t data_state2;
 uint8_t data_state3;
+
+uint8_t light_off_hour;
+uint8_t light_off_minute;
+uint8_t light_on_hour;
+uint8_t light_on_minute;
+bool light_status;
+
+
 
 void handleRoot();
 void handleNotFound();
@@ -74,7 +83,12 @@ void jsRelayControl();
 void timeTrack();
 void writeStoredTimeData();
 void writeStoredLimitData();
+void writeStoredLightData();
+//void lightStatus();
+//void lightClockStop();
+//void lightClockStart();
 void jsWindowLoad();
+
 String clockSet(String clockData);
 String clockOutput();
 
@@ -395,12 +409,19 @@ ptr +="              <div class=\"card-header\">\n";
 ptr +="               <h4 class=\"my-0 font-weight-normal\">Light</h4>\n";
 ptr +="              </div>\n";
 ptr +="              <div class=\"card-body mx-auto time\">\n";
-ptr +="                  <div class=\"time\" >Light on<input type=\"time\" value=\"08:56:33\"></div>\n";
-ptr +="                  <div class=\"time\" >Light off<input type=\"time\" value=\"08:56:33\"></div>\n";
-ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input type=\"checkbox\" ><span class=\"slider round\"></span> </label></div>\n";
+ptr +="                  <div class=\"time\" >Light on<input name=\"light_on\" type=\"time\" value=\"";
+ptr += light_data[0];
+ptr += "\"></div>\n";
+ptr +="                  <div class=\"time\" >Light off<input name=\"light_off\" type=\"time\" value=\"";
+ptr +=light_data[1];
+ptr +="\"></div>\n";
+if (light_data[2] == "on") {
+ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\" checked><span class=\"slider round\"></span> </label></div>\n";
+}else{
+  ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\"><span class=\"slider round\"></span> </label></div>\n";
+}
 
-
-ptr +="                  <button type=\"button\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
+ptr +="                  <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
 ptr +="            </div>\n";
 
 ptr +="          </div>\n";
@@ -551,6 +572,80 @@ ptr +="</html>\n";
 return ptr;
 
 }
+
+
+void lightClockStart(String clockData){
+
+  String string_hours, string_minutes, string_seconds;
+  
+  int change_hours =  clockData.indexOf(':') ;
+  int change_minutes = clockData.indexOf(':', change_hours+1) ;
+  int change_seconds = clockData.indexOf(':', change_minutes+1) ;
+
+  string_hours = clockData.substring(0, 2);
+  string_minutes = clockData.substring(3, 5);
+  string_seconds = clockData.substring(6, 8);
+
+  light_on_hour = string_hours.toInt();
+  light_on_minute = string_minutes.toInt();
+
+}
+
+
+void lightClockStop(String clockData){
+
+  String string_hours, string_minutes, string_seconds;
+  
+  int change_hours =  clockData.indexOf(':') ;
+  int change_minutes = clockData.indexOf(':', change_hours+1) ;
+  int change_seconds = clockData.indexOf(':', change_minutes+1) ;
+
+  string_hours = clockData.substring(0, 2);
+  string_minutes = clockData.substring(3, 5);
+  string_seconds = clockData.substring(6, 8);
+
+  light_off_hour = string_hours.toInt();
+  light_off_minute = string_minutes.toInt();
+  
+}
+
+void lightStatus(){
+
+  if (hours == light_on_hour) {
+
+    if (minutes == light_on_minute) {
+       
+      if (light_status != true){
+
+        //fire off light on command
+        Serial.println("Lights on");
+        light_status = true;
+      }
+       
+       }    
+
+  }
+  
+  if (hours == light_off_hour) {
+
+    if (minutes == light_off_minute) {
+       
+      if (light_status != false){
+
+        //fire off light on command
+        Serial.println("Lights off");
+        light_status = false;
+      }
+       
+       }    
+
+  }
+
+
+}
+
+
+
 
 
 
@@ -1551,6 +1646,9 @@ void setup() {
     }else{
   readStoredData();
     }
+
+    lightClockStart(light_data[0]);
+    lightClockStop(light_data[1]);
   
   String active = "on";
   
@@ -1634,6 +1732,8 @@ void loop() {
   
   timeTrack();
   server.handleClient();
+
+  lightStatus();
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1858,6 +1958,9 @@ void handleForm() {
    String form_clock_set = server.arg("clock");
    String form_clock_tz = server.arg("tz");
    String form_clock_set_bool = server.arg("clockset");
+   String form_light_on = server.arg("light_on");
+   String form_light_off = server.arg("light_off");
+   String form_light_strobe = server.arg("light_strobe");
 
   Serial.println(form_ap_active);
   Serial.println(form_ap_pass);
@@ -1954,8 +2057,16 @@ void handleForm() {
    limit_data[0] = form_relay_limit_temp ;
    limit_data[1] = form_relay_limit_co2 ;
    limit_data[2] = form_relay_limit_hum ;
-   
+
    writeStoredLimitData();
+
+   light_data[0] = form_light_on ;
+   light_data[1] = form_light_off ;
+   light_data[2] = form_light_strobe ;
+
+   lightClockStart(light_data[0]);
+   lightClockStop(light_data[1]);
+
 
    if (resetFlag){
 
@@ -1983,6 +2094,56 @@ void handleForm() {
   
 }
 
+void writeStoredLightData(){
+
+
+  File file = SPIFFS.open("/light.txt", "w");
+  if (!file) {
+    Serial.println("limit.txt failed to open file for writing");
+    return;
+   }
+   
+  file.println(light_data[0]);
+  file.println(light_data[1]);
+  file.println(light_data[2]);
+     
+
+  
+  
+
+  Serial.println("light data stored");
+  Serial.println('\n');
+   Serial.println("**********************");
+   Serial.println("*                    *");
+   Serial.println("*  light file verify  *");
+   Serial.println("*                    *");
+   Serial.println("**********************");
+   Serial.println('\n');
+   Serial.println("Contents:");
+
+
+  
+  while (file.available()) {
+    wifi_data.push_back(file.readStringUntil('\n'));
+    Serial.println("validating light file....");
+    }
+   file.close();
+
+   
+
+   for (String s : light_data ) {
+    
+    Serial.println(s);
+    
+    }
+    light_data[0].replace("\r","");
+    light_data[1].replace("\r","");
+    light_data[2].replace("\r","");
+   
+   
+
+}
+
 void writeStoredLimitData(){
 
 
@@ -1992,7 +2153,7 @@ void writeStoredLimitData(){
     return;
    }
    
-  file.println(limit_data[0]);
+  file.println(light_data[0]);
   file.println(limit_data[1]);
   file.println(limit_data[2]);
      
@@ -2310,6 +2471,33 @@ void readStoredData(){
     String current_time;
     current_time = time_data[1];
     clockSet(current_time);
+   
+
+   //begin light file read
+   File file4 = SPIFFS.open("/light.txt", "r");
+
+   if (!file4) {
+    Serial.println("failed to open light file for reading");
+    return;
+   }
+   
+
+   while (file4.available()) {
+    light_data.push_back(file4.readStringUntil('\n'));
+    Serial.println("reading light file....");
+    }
+   file4.close();
+
+   for (String s : light_data ) {
+    
+    Serial.println(s);
+    
+    }
+
+   light_data[0].replace("\r","");
+   light_data[1].replace("\r","");
+   light_data[1].replace("\r","");
+  
 
 
         
@@ -2425,6 +2613,13 @@ String clockSet(String clockData) {
    
   return output_time;
 }
+
+
+
+
+
+
+
 
 String clockOutput(){
 
