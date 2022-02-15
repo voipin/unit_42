@@ -57,6 +57,8 @@ uint8_t light_off_minute;
 uint8_t light_on_hour;
 uint8_t light_on_minute;
 bool light_status;
+bool fan_relay;
+bool hum_relay;
 
 
 
@@ -573,6 +575,56 @@ return ptr;
 
 }
 
+void limitStatus() {
+
+  int temp;
+  int carbon_dioxide;
+  int hum;
+
+  temp = limit_data[0].toInt();
+  carbon_dioxide = limit_data[1].toInt();
+  hum = limit_data[2].toInt();
+
+  
+
+  if ( (sgp.eCO2 > carbon_dioxide ||  Temperature > temp) && fan_relay !=true ) {
+
+    
+    Serial.println("Co2 limit or temp reached, fan on");
+    fan_relay=true;
+    
+    }
+      
+  if ( (sgp.eCO2 < carbon_dioxide &&  Temperature < temp) && fan_relay==true ) {
+
+        Serial.println("Co2 / temp limit good, fan off");
+        fan_relay = false;
+
+    }
+  
+
+  if ( hum < Humidity &&  hum_relay !=true ) {
+
+     
+    Serial.println("hum low limit reached, hum on");
+    hum_relay=true;
+    
+
+  }
+
+  if ( hum >= Humidity && hum_relay ==true ) {
+
+     
+    Serial.println("hum low limit reached, hum on");
+    hum_relay=false;
+    
+
+  }
+
+
+
+
+}
 
 void lightClockStart(String clockData){
 
@@ -1570,7 +1622,7 @@ void displayEnvData(){
   if (memcmp(history,u8g2.getBufferPtr(),1024)){
     memcpy(history, u8g2.getBufferPtr(), 1024);
     
-    Serial.println("changed!");
+    //Serial.println("changed!");
     u8g2.sendBuffer();
     
     }    
@@ -1734,6 +1786,7 @@ void loop() {
   server.handleClient();
 
   lightStatus();
+  limitStatus();
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1844,6 +1897,8 @@ void loop() {
   }
   Serial.print("Raw H2 "); Serial.print(sgp.rawH2); Serial.print(" \t");
   Serial.print("Raw Ethanol "); Serial.print(sgp.rawEthanol); Serial.println("");
+
+
 
 
 
@@ -1973,13 +2028,14 @@ void handleForm() {
   Serial.println(form_relay_toggle_fan);
   Serial.println(form_clock_set);
 
-  String new_time = clockSet(form_clock_set);
+  
 
   tz = server.arg("tz");
   time_data[0]=tz;
 
   if (form_clock_set_bool == "1"){
     Serial.println("clock set bool is on, setting clock...");
+    String new_time = clockSet(form_clock_set);
     writeStoredTimeData();
   }
   
@@ -2063,6 +2119,8 @@ void handleForm() {
    light_data[0] = form_light_on ;
    light_data[1] = form_light_off ;
    light_data[2] = form_light_strobe ;
+
+   writeStoredLightData();
 
    lightClockStart(light_data[0]);
    lightClockStop(light_data[1]);
@@ -2153,7 +2211,7 @@ void writeStoredLimitData(){
     return;
    }
    
-  file.println(light_data[0]);
+  file.println(limit_data[0]);
   file.println(limit_data[1]);
   file.println(limit_data[2]);
      
@@ -2531,6 +2589,18 @@ void readTemp(){
   Serial.println((int)Temperature * 1.8 + 32);
   Temperature = Temperature * 1.8 +32;
 
+  int temp;
+  int carbon_dioxide;
+  int hum;
+
+  temp = limit_data[0].toInt();
+  carbon_dioxide = limit_data[1].toInt();
+  hum = limit_data[2].toInt();
+
+  Serial.print("Temp Limit "); Serial.print(temp); Serial.println("");
+  Serial.print("Co2 limit "); Serial.print(carbon_dioxide); Serial.println("");
+  Serial.print("Humidity limit "); Serial.print(hum); Serial.println("");
+
 
 }
 
@@ -2600,7 +2670,7 @@ String clockSet(String clockData) {
 
   hours = string_hours.toInt();
   minutes = string_minutes.toInt();
-  seconds = string_seconds.toInt();
+  seconds = 0;
 
   char output_time[8];
 
