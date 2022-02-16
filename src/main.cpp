@@ -2721,7 +2721,7 @@ String clockSet(String clockData) {
 
   char output_time[8];
 
-  sprintf (output_time,"%02d:%02d:%02d", hours, minutes, seconds);
+  sprintf (output_time,"%02d:%02d", hours, minutes);
 
   Serial.print("time is now:");
   Serial.println(output_time);
@@ -2742,7 +2742,7 @@ String clockOutput(){
 
 char output_time[8];
 
-  sprintf (output_time,"%02d:%02d:%02d", hours, minutes, seconds);
+  sprintf (output_time,"%02d:%02d", hours, minutes);
 
   return output_time;
 
