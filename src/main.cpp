@@ -65,7 +65,7 @@ bool hum_relay;
 void handleRoot();
 void handleNotFound();
 void readStoredData();
-void enableWifi();
+bool enableWifi();
 void handleForm();
 void fileindex();
 void bootstrap();
@@ -313,7 +313,7 @@ ptr +="</script>";
 
 ptr +="<div class=\"form-group\">\n";
 ptr +="<form id=\"control_form\" class=\"form-group\" action=\"/submit_page\">\n";
-ptr +="<input name=\"clockset\" type=\"hidden\" id=\"clockset\" value=0 >\"\n";
+ptr +="<input name=\"clockset\" type=\"hidden\" id=\"clockset\" value=0 >\n";
 ptr +="<div class=\"pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center\">\n";
 ptr +="    <h1 class=\"display-4\">Control</h1>\n";
 ptr +="    <p class=\"lead\">Control all systems</p>\n";
@@ -1596,7 +1596,17 @@ void displayEnvData(){
     u8g2.setCursor(12,10);
     u8g2.print("http://");
     u8g2.print(WiFi.localIP());
-  }
+
+  }else {
+
+      if (WiFi.softAPIP()){
+
+        u8g2.setCursor(12,10);
+        u8g2.print("http://");
+        u8g2.print(WiFi.softAPIP());
+
+          }
+       }
   
   u8g2.setCursor(12,20);
   //u8g2.setCursor(12,10);
@@ -1676,6 +1686,9 @@ void updateOnChange(){
 
 
 void setup() {
+  
+  
+  
   Serial.begin(115200);
   while (!Serial); 
   pcf.setup(0x20);        // The PCF8574 is configured to 0x20 I2C address. Check A0, A1 and A2 pins of the device.
@@ -1715,15 +1728,27 @@ void setup() {
   Serial.println(active.length());
   Serial.println(wifi_data[1]);
   Serial.println(wifi_data[2]);
+
+
+  //override for wifi not connecting test
+
+ 
   
   if (wifi_data[0] == "on" ) {
     Serial.println("Wifi enabled");
     enableWifi();
   }
 
-  
+ 
 
-   WiFi.softAP(ap_data[1], ap_data[2]);
+  if (ap_data[0] == "on" ) {
+    Serial.println("ap enabled");
+    WiFi.softAP(ap_data[1], ap_data[2]);
+        
+  }
+  
+  
+  //WiFi.softAP(ap_data[1], ap_data[2]);
 
   Serial.println("clock time:");
   String get_time = clockOutput();
@@ -2244,6 +2269,9 @@ void writeStoredLimitData(){
     Serial.println(s);
     
     }
+    limit_data[0].replace(" ","");
+    limit_data[1].replace(" ","");
+    limit_data[2].replace(" ","");
     limit_data[0].replace("\r","");
     limit_data[1].replace("\r","");
     limit_data[2].replace("\r","");
@@ -2561,21 +2589,40 @@ void readStoredData(){
         
 };
 
-void enableWifi(){
+bool enableWifi(){
+
+  uint8_t fail_count = 0;
+  bool wifi_enable = false;
   
   WiFi.begin(wifi_data[1], wifi_data[2]);
+  //WiFi.begin("garbage","datadata123");
   Serial.print("Connecting to ");
   Serial.print(wifi_data[1]);
   
-  while (WiFi.status() != WL_CONNECTED )
+  while (WiFi.status() != WL_CONNECTED && fail_count <= 9)
   {
     delay(1000);
     Serial.print(".");
-    }
+    fail_count = fail_count +1;
+    
 
-  Serial.println();
-  Serial.print("Connected to WIFI ");
-  Serial.println(WiFi.localIP());
+    }
+  if (fail_count == 10 ) {
+
+    Serial.println("Wifi failure, do something bad on the screen ");
+    WiFi.mode(WIFI_AP);
+
+    return false;
+
+  }else{
+
+     Serial.println();
+    Serial.print("Connected to WIFI ");
+    Serial.println(WiFi.localIP());
+    return true;
+  }
+
+ 
 
 }
 
