@@ -56,9 +56,13 @@ uint8_t light_off_hour;
 uint8_t light_off_minute;
 uint8_t light_on_hour;
 uint8_t light_on_minute;
-bool light_status;
-bool fan_relay;
-bool hum_relay;
+bool light_manual;
+bool fan_manual;
+bool hum_manual;
+bool light_auto;
+bool fan_auto;
+bool hum_auto;
+bool manual_override;
 
 
 
@@ -69,8 +73,8 @@ bool enableWifi();
 void handleForm();
 void fileindex();
 void bootstrap();
-void handle_RelayOn();
-void handle_RelayOff();
+//void handle_RelayOn();
+//void handle_RelayOff();
 void readTemp();
 void writeStoredWifiData();
 void writeStoredApData();
@@ -86,10 +90,20 @@ void timeTrack();
 void writeStoredTimeData();
 void writeStoredLimitData();
 void writeStoredLightData();
+void handle_LightOn();
+void handle_LightOff();
+void handle_HumidityOn();
+void handle_HumidityOff();
+void handle_FanOn();
+void handle_FanOff();
+
 //void lightStatus();
 //void lightClockStop();
 //void lightClockStart();
 void jsWindowLoad();
+void manualOverrideOn();
+void manualOverrideOff();
+
 
 String clockSet(String clockData);
 String clockOutput();
@@ -256,8 +270,8 @@ ptr +="    <link href=\"slide.css\" rel=\"stylesheet\">\n";
 ptr +="</head>\n";
 ptr +="<body>\n";
 ptr +="<style>\n";
-ptr +="time {\n";
-ptr +="        margin: 10px ; \n";
+ptr +=".time {\n";
+ptr +="        margin: 10px 10px; \n";
 ptr +="    }\n";
 ptr +="    table {\n";
 ptr +="        width:100%;\n";
@@ -417,10 +431,15 @@ ptr += "\"></div>\n";
 ptr +="                  <div class=\"time\" >Light off<input name=\"light_off\" type=\"time\" value=\"";
 ptr +=light_data[1];
 ptr +="\"></div>\n";
-if (light_data[2] == "on") {
-ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\" checked><span class=\"slider round\"></span> </label></div>\n";
+if (light_data[2]=="on") {
+ptr +="                  <div class= \"time\"> Alert strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\" checked><span class=\"slider round\"></span> </label></div>\n";
 }else{
-  ptr +="                  <div class= \"time\"> Relay strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\"><span class=\"slider round\"></span> </label></div>\n";
+  ptr +="                  <div class= \"time\"> Alert strobe <label class=\"switch\"><input name=\"light_strobe\" type=\"checkbox\"><span class=\"slider round\"></span> </label></div>\n";
+}
+if (light_auto==true) {
+ptr +="                  <div class= \"time\"> Light On/Off <label class=\"switch\"><input name=\"light_strobe\" id=\"light\" type=\"checkbox\" checked><span class=\"slider round\"></span> </label></div>\n";
+}else{
+  ptr +="                  <div class= \"time\"> Light On/Off <label class=\"switch\"><input  id=\"light\" name=\"light_status\" type=\"checkbox\"><span class=\"slider round\"></span> </label></div>\n";
 }
 
 ptr +="                  <button type=\"submit\" class=\"btn btn-lg btn-block btn-primary\">Save</button>\n";
@@ -493,13 +512,22 @@ ptr +="            <div class=\"row\">\n";
 
 ptr +="                <div class=\"card-body mx-auto\">\n";
 
+ptr +="                 <div class=\"time\"> ";
+ptr +="                 <div class=\"relay-text\">Manual OverRide</div>\n";
+if (manual_override == true) {
+ptr +="                 <div class=\"relay-input\"><label class=\"switch\"><input id=\"manual_override\" value=\"on\" name=\"manual_override\" type=\"checkbox\" checked/><span class=\"slider round\"></span></div>\n";
+}else{
+
+  ptr +="                 <div class=\"relay-input\"><label class=\"switch\"><input id=\"manual_override\" value=\"on\" name=\"manual_override\" type=\"checkbox\"/><span class=\"slider round\"></span></div>\n";
+
+}
 
 ptr +="                    <ul class=\"list-group\">\n";
 ptr +="                        <li class=\"list-group-item d-flex justify-content-between align-items-center\">\n";
 ptr +="                            <table>\n";
 ptr +="                                <tr>\n";
 ptr +="                                    <td class=\"relay-text\">Fan</td>\n";
-if (form_relay_toggle_fan == "on"){
+if (fan_auto == true){
   ptr +="                                    <td class=\"relay-input\"><label class=\"switch\"><input id=\"fan\" value=\"on\" name=\"relay_toggle_fan\" type=\"checkbox\" checked/><span class=\"slider round\"></span></td>\n";
 
   }else
@@ -517,7 +545,12 @@ ptr +="                        <li class=\"list-group-item d-flex justify-conten
 ptr +="                            <table>\n";
 ptr +="                                <tr>\n";
 ptr +="                                    <td class=\"relay-text\" >Humidity </td>\n";
-ptr +="                                    <td class=\"relay-input\"> <label class=\"switch\"><input id=\"humidity\" name=\"relay_toggle_hum\" type=\"checkbox\" /> <span class=\"slider round\"></span></td>\n";
+if (hum_auto == true ){
+ptr +="                                    <td class=\"relay-input\"> <label class=\"switch\"><input id=\"humidity\" name=\"relay_toggle_hum\" type=\"checkbox\" checked /> <span class=\"slider round\"></span></td>\n";
+}else{
+  ptr +="                                    <td class=\"relay-input\"> <label class=\"switch\"><input id=\"humidity\" name=\"relay_toggle_hum\" type=\"checkbox\" /> <span class=\"slider round\"></span></td>\n";
+
+}
 ptr +="                                </tr>\n";
 
 ptr +="                            </table>\n";
@@ -534,6 +567,9 @@ ptr +="            </div>\n";
 ptr +="        </div>\n";
 ptr +="</form>\n";
 ptr += " <div id=\"fan_action\" hidden ></div>";
+ptr += " <div id=\"light_action\" hidden ></div>";
+ptr += " <div id=\"humidity_action\" hidden ></div>";
+ptr += " <div id=\"manual_action\" hidden ></div>";
 ptr +="    <footer class=\"pt-4 my-md-5 pt-md-5 border-top\">\n";
 ptr +="        <div class=\"row\">\n";
 ptr +="            <div class=\"col-12 col-md\">\n";
@@ -587,36 +623,36 @@ void limitStatus() {
 
   
 
-  if ( (sgp.eCO2 > carbon_dioxide ||  Temperature > temp) && fan_relay !=true ) {
+  if ( (sgp.eCO2 > carbon_dioxide ||  Temperature > temp) && fan_auto !=true ) {
 
     
     Serial.println("Co2 limit or temp reached, fan on");
-    fan_relay=true;
+    fan_auto=true;
     
     }
       
-  if ( (sgp.eCO2 < carbon_dioxide &&  Temperature < temp) && fan_relay==true ) {
+  if ( (sgp.eCO2 < carbon_dioxide &&  Temperature < temp) && fan_auto == true ) {
 
         Serial.println("Co2 / temp limit good, fan off");
-        fan_relay = false;
+        fan_auto = false;
 
     }
   
 
-  if ( hum < Humidity &&  hum_relay !=true ) {
+  if ( hum < Humidity &&  hum_auto !=true ) {
 
      
     Serial.println("hum low limit reached, hum on");
-    hum_relay=true;
+    hum_auto = true;
     
 
   }
 
-  if ( hum >= Humidity && hum_relay ==true ) {
+  if ( hum >= Humidity && hum_auto == true ) {
 
      
-    Serial.println("hum low limit reached, hum on");
-    hum_relay=false;
+    Serial.println("hum low limit reached, hum off");
+    hum_auto = false;
     
 
   }
@@ -667,11 +703,11 @@ void lightStatus(){
 
     if (minutes == light_on_minute) {
        
-      if (light_status != true){
+      if (light_auto != true){
 
         //fire off light on command
         Serial.println("Lights on");
-        light_status = true;
+        light_auto = true;
       }
        
        }    
@@ -682,11 +718,11 @@ void lightStatus(){
 
     if (minutes == light_off_minute) {
        
-      if (light_status != false){
+      if (light_auto != false){
 
         //fire off light on command
         Serial.println("Lights off");
-        light_status = false;
+        light_auto = false;
       }
        
        }    
@@ -1715,6 +1751,12 @@ void setup() {
     lightClockStart(light_data[0]);
     lightClockStop(light_data[1]);
   
+  // set light status on light_data[3] to off on reboot
+
+  light_data.push_back("on");
+  
+  light_data[3] = "on";
+
   String active = "on";
   
   Serial.println("Wifi data:");
@@ -1781,10 +1823,16 @@ void setup() {
   server.on("/slide.css", slide);
   server.on("/update_sensor",updateSensor);
 
-  server.on("/relay_on", handle_RelayOn);
-  server.on("/relay_off", handle_RelayOff);
-  server.on("/fan_relay_on", handle_RelayOn);
-  server.on("/fan_relay_off", handle_RelayOff);
+  //server.on("/relay_on", handle_RelayOn);
+  //server.on("/relay_off", handle_RelayOff);
+  server.on("/fan_relay_on", handle_FanOn);
+  server.on("/fan_relay_off", handle_FanOff);
+  server.on("/humidity_relay_on", handle_HumidityOn);
+  server.on("/humidity_relay_off", handle_HumidityOff);
+  server.on("/light_relay_on", handle_LightOn);
+  server.on("/light_relay_off", handle_LightOff);
+  server.on("/manual_override_on", manualOverrideOn);
+  server.on("/manual_override_off", manualOverrideOff);
 
 
 
@@ -1811,7 +1859,7 @@ void loop() {
   server.handleClient();
 
   lightStatus();
-  limitStatus();
+  //limitStatus();
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1938,6 +1986,8 @@ server.send(200, "text/html", updateSensorAjax(Temperature, Humidity, sgp.eCO2))
 
 }
 
+
+
 void handleRoot() {
   String form_relay_toggle_fan="";
   String new_time = clockOutput();
@@ -1990,8 +2040,6 @@ void jsWindowLoad(){
 }
 
 
-
-
 void popper(){
    File file = SPIFFS.open("/popper.min.js", "r"); 
    size_t sent = server.streamFile(file, "application/javascript");
@@ -2006,17 +2054,60 @@ void fileindex(){
    size_t sent = server.streamFile(file, "text/html");
 }
 
-void handle_RelayOn(){
-Serial.println("relay on");
+void manualOverrideOn(){
+  manual_override = true;
+
+}
+void manualOverrideOff(){
+  manual_override = false;
+
+}
+
+void handle_FanOn(){
+Serial.println("fan on");
  digitalWrite(Relay1, HIGH);
+ fan_manual = true;
  server.send(200, "text/html", "relay_on");
 };
 
-void handle_RelayOff(){
-  Serial.println("relay off");
+void handle_FanOff(){
+  Serial.println("fan off");
  digitalWrite(Relay1, LOW);
+ fan_manual = false;
  server.send(200, "text/html", "relay_off");
 };
+
+void handle_LightOn(){
+Serial.println("light on");
+ //digitalWrite(Relay1, HIGH);
+ light_data[3] = "on";
+ light_manual = true;
+ server.send(200, "text/html", "light_on");
+};
+
+void handle_LightOff(){
+  Serial.println("light off");
+ //digitalWrite(Relay1, LOW);
+ light_data[3] = "off";
+ light_manual = false;
+ server.send(200, "text/html", "light_off");
+};
+
+
+void handle_HumidityOn(){
+Serial.println("humidity on");
+ //digitalWrite(Relay1, HIGH);
+ hum_manual = true;
+ server.send(200, "text/html", "light_on");
+};
+
+void handle_HumidityOff(){
+  Serial.println("humidity off");
+ //digitalWrite(Relay1, LOW);
+ hum_manual = false;
+ server.send(200, "text/html", "light_off");
+};
+
 
 void handleForm() {
 
@@ -2145,6 +2236,7 @@ void handleForm() {
    light_data[1] = form_light_off ;
    light_data[2] = form_light_strobe ;
 
+
    writeStoredLightData();
 
    lightClockStart(light_data[0]);
@@ -2222,6 +2314,7 @@ void writeStoredLightData(){
     light_data[0].replace("\r","");
     light_data[1].replace("\r","");
     light_data[2].replace("\r","");
+    
    
    
 
@@ -2582,7 +2675,7 @@ void readStoredData(){
 
    light_data[0].replace("\r","");
    light_data[1].replace("\r","");
-   light_data[1].replace("\r","");
+   light_data[2].replace("\r","");
   
 
 
