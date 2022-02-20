@@ -96,6 +96,7 @@ void handle_HumidityOn();
 void handle_HumidityOff();
 void handle_FanOn();
 void handle_FanOff();
+void FactoryResetStoredData();
 
 //void lightStatus();
 //void lightClockStop();
@@ -513,7 +514,7 @@ ptr +="            <div class=\"row\">\n";
 ptr +="                <div class=\"card-body mx-auto\">\n";
 
 ptr +="                 <div class=\"time\"> ";
-ptr +="                 <div class=\"relay-text\">Manual OverRide</div>\n";
+ptr +="                 <div class=\"relay-text\">Manual</div>\n";
 if (manual_override == true) {
 ptr +="                 <div class=\"relay-input\"><label class=\"switch\"><input id=\"manual_override\" value=\"on\" name=\"manual_override\" type=\"checkbox\" checked/><span class=\"slider round\"></span></div>\n";
 }else{
@@ -621,7 +622,10 @@ void limitStatus() {
   carbon_dioxide = limit_data[1].toInt();
   hum = limit_data[2].toInt();
 
-  
+  if (manual_override == true) {
+    Serial.println("manual override active");
+    return;
+  }
 
   if ( (sgp.eCO2 > carbon_dioxide ||  Temperature > temp) && fan_auto !=true ) {
 
@@ -763,7 +767,7 @@ bool exitBool = (stateMenu=="env_menu" ||stateMenu == "env_alert_1" | stateMenu 
  stateMenu == "env_alert_2" ||  stateMenu == "env_alert_co2" || stateMenu == "env_alert_hum" || stateMenu == "wifi"
  || stateMenu == "main_menu" || stateMenu == "relay" || stateMenu == "relay_toggle" || stateMenu == "relay_temp" ||
  stateMenu == "relay_limit" || stateMenu == "relay_co2" || stateMenu == "relay_hum" || stateMenu == "relay_toggle_fan" ||
- stateMenu == "relay_toggle_hum");
+ stateMenu == "relay_toggle_hum") || stateMenu == "system";
 
 
 
@@ -815,15 +819,61 @@ if (stateMenu == "main_menu" && button == LOW){
 // 3.exit
 
     if (stateMenu == "main_menu" && button2 == LOW){
-      stateMenu = "wifi";
+      stateMenu = "system";
       displayed = 0;
       loopTime = 200;
-      //menuDisplay[0] = { "wifi-menu" };
-      //menuDisplay[1] = { ssid };
-      //menuDisplay[2] = { pass };
+      menuDisplay[0] = { "system-menu" };
+      menuDisplay[1] = { "wifi" };
+      menuDisplay[2] = { "factory-reset" };
       return 0;
 
     }
+
+    if (stateMenu == "system" && button == LOW){
+      stateMenu = "wifi";
+      displayed = 0;
+      loopTime = 200;
+      //menuDisplay[0] = { "system-menu" };
+      //menuDisplay[1] = { "wifi" };
+      //menuDisplay[2] = { "factory-reset" };
+      return 0;
+
+    }
+    if (stateMenu == "system" && button2 == LOW){
+      stateMenu = "factory_reset";
+      displayed = 0;
+      loopTime = 200;
+      //menuDisplay[0] = { "system-menu" };
+      //menuDisplay[1] = { "wifi" };
+      //menuDisplay[2] = { "factory-reset" };
+      return 0;
+
+    }
+    if (stateMenu == "factory_reset" && button == LOW){
+      stateMenu = "main_menu";
+      displayed = 0;
+      loopTime = 200;
+      Serial.println("back to life, back to the factory.");
+      FactoryResetStoredData();
+      //menuDisplay[0] = { "system-menu" };
+      //menuDisplay[1] = { "wifi" };
+      //menuDisplay[2] = { "factory-reset" };
+      return 0;
+
+    }
+     if (stateMenu == "factory_reset" && button2 == LOW){
+      stateMenu = "main_menu";
+      Serial.println("oh no, please don't hurt my factory");
+      displayed = 0;
+      loopTime = 200;
+      //menuDisplay[0] = { "system-menu" };
+      //menuDisplay[1] = { "wifi" };
+      //menuDisplay[2] = { "factory-reset" };
+      return 0;
+
+    }
+   
+
     
     if (stateMenu == "wifi" && button == LOW){
       stateMenu = "wifi_sid";
@@ -1248,7 +1298,7 @@ void mainMenu(){
   u8g2.setCursor(12,30);
   u8g2.print("1. env");
   u8g2.setCursor(12,40);
-  u8g2.print("2. wifi ");
+  u8g2.print("2. system ");
   u8g2.setCursor(12,50);
   u8g2.print("3. exit ");
   
@@ -1276,6 +1326,31 @@ void wifi(){
   u8g2.sendBuffer();
 
 }
+
+void factoryReset(){
+  u8g2.begin();
+  u8g2.enableUTF8Print();   
+  //8g2.setFont(u8g2_font_helvB18_tf);
+  u8g2.setFont(u8g2_font_helvB08_tf);
+  u8g2.setFontDirection(0);
+  //u8g2.clearBuffer();
+  u8g2.setCursor(12,10);
+  u8g2.print("Factory Reset?");
+  
+  u8g2.setCursor(12,30);
+  u8g2.print("1. yes!");
+  
+  u8g2.setCursor(12,40);
+  u8g2.print("2. oh no! ");
+  
+  u8g2.setCursor(12,50);
+ 
+  u8g2.sendBuffer();
+
+}
+
+
+
 
 void relay(){
   u8g2.begin();
@@ -1548,6 +1623,14 @@ void displayMenu(){
   if (stateMenu=="main_menu"){
     mainMenu();
   }
+  if (stateMenu=="system"){
+    drawMenu();
+  }
+  if (stateMenu=="factory_reset"){
+    factoryReset();
+  }
+  
+
   if (stateMenu=="env_menu"){
     drawMenu();
   }
@@ -1859,7 +1942,7 @@ void loop() {
   server.handleClient();
 
   lightStatus();
-  //limitStatus();
+  limitStatus();
 
   data1 = pcf.digitalRead(4);
   data2 = pcf.digitalRead(5);
@@ -1872,8 +1955,10 @@ void loop() {
       Serial.println("button 1 pressed");
       if (stateMenu != "sensor_data") {
           menuState(data1,data2,data3);
+         
       }
       
+       return;
       
        }
 
@@ -1881,6 +1966,7 @@ void loop() {
     {
       data_state1 = 0;  
       Serial.println("button 1 released");
+      return;
     }
   
   //button 2 state
@@ -1890,13 +1976,16 @@ void loop() {
       Serial.println("button 2 pressed");
 
       menuState(data1,data2,data3);
+      return;
     }
 
     
     if (data2 == HIGH && data_state2)
     {
+
       data_state2 = 0;  
       Serial.println("button 2 released");
+      return;
       
     }
     
@@ -1908,7 +1997,9 @@ void loop() {
 
       if (stateMenu != "sensor_data") {
           menuState(data1,data2,data3);
+          
       }
+      return;
     }
 
 
@@ -1916,6 +2007,7 @@ void loop() {
     {
       data_state3 = 0;  
       Serial.println("button 3 released");
+      return;
       
     }
 
@@ -1926,6 +2018,7 @@ void loop() {
    //delay(200);
    
    displayMenu();
+   return;
    
 
   }
@@ -1938,6 +2031,7 @@ void loop() {
 
   
   counter++;
+
   if (counter == 300) {
 
 
@@ -1951,6 +2045,7 @@ void loop() {
       Serial.println("Failed to get baseline readings");
       return;
     }
+
     Serial.print("****Baseline values: eCO2: 0x"); Serial.print(eCO2_base, HEX);
     Serial.print(" & TVOC: 0x"); Serial.println(TVOC_base, HEX);
     
@@ -1959,6 +2054,7 @@ void loop() {
     //return;
     //delay(5000);
   }
+
   Serial.print("TVOC "); Serial.print(sgp.TVOC); Serial.print(" ppb\t");
   Serial.print("eCO2 "); Serial.print(sgp.eCO2); Serial.println(" ppm");
 
@@ -1968,19 +2064,16 @@ void loop() {
     Serial.println("Raw Measurement failed");
     //return;
   }
+
   Serial.print("Raw H2 "); Serial.print(sgp.rawH2); Serial.print(" \t");
   Serial.print("Raw Ethanol "); Serial.print(sgp.rawEthanol); Serial.println("");
-
-
-
-
-
 
   }
   
 }
 
-void updateSensor() {
+void updateSensor() 
+{
 
 server.send(200, "text/html", updateSensorAjax(Temperature, Humidity, sgp.eCO2));
 
@@ -2056,10 +2149,15 @@ void fileindex(){
 
 void manualOverrideOn(){
   manual_override = true;
+  Serial.println("manual on");
+  server.send(200, "text/html", "manual_on");
+
 
 }
 void manualOverrideOff(){
   manual_override = false;
+  Serial.println("manual off");
+  server.send(200, "text/html", "manual_off");
 
 }
 
@@ -2067,14 +2165,14 @@ void handle_FanOn(){
 Serial.println("fan on");
  digitalWrite(Relay1, HIGH);
  fan_manual = true;
- server.send(200, "text/html", "relay_on");
+ server.send(200, "text/html", "fan_on");
 };
 
 void handle_FanOff(){
   Serial.println("fan off");
  digitalWrite(Relay1, LOW);
  fan_manual = false;
- server.send(200, "text/html", "relay_off");
+ server.send(200, "text/html", "fan_off");
 };
 
 void handle_LightOn(){
@@ -2098,14 +2196,14 @@ void handle_HumidityOn(){
 Serial.println("humidity on");
  //digitalWrite(Relay1, HIGH);
  hum_manual = true;
- server.send(200, "text/html", "light_on");
+ server.send(200, "text/html", "humidity_on");
 };
 
 void handle_HumidityOff(){
   Serial.println("humidity off");
  //digitalWrite(Relay1, LOW);
  hum_manual = false;
- server.send(200, "text/html", "light_off");
+ server.send(200, "text/html", "humidity_off");
 };
 
 
@@ -2459,6 +2557,7 @@ void writeStoredApData(){
     ap_data.push_back(file.readStringUntil('\n'));
     Serial.println("validating ap file....");
     }
+
    file.close();
 
    
@@ -2483,6 +2582,7 @@ void writeStoredTimeData(){
   if (!file) {
     Serial.println("time.txt failed to open file for writing");
     return;
+
    }
    
   file.println(time_data[0]);
@@ -2504,6 +2604,7 @@ void writeStoredTimeData(){
     time_data.push_back(file.readStringUntil('\n'));
     Serial.println("validating time file....");
     }
+
    file.close();
 
    
@@ -2522,7 +2623,97 @@ void writeStoredTimeData(){
 }
 
 
+void FactoryResetStoredData(){
 
+  
+   //write wifi data factory
+   
+   File file = SPIFFS.open("/wifi.txt", "w");
+
+   if (!file) {
+    Serial.println("failed to open file for writting");
+    return;
+   }
+
+   file.println("on");
+   file.println("somenetwork");
+   file.println("thisisapassword");
+   
+
+   
+   file.close();
+   
+    
+    
+    // write ap data factory
+    
+    File file1 = SPIFFS.open("/ap.txt", "w");
+
+   if (!file1) {
+    Serial.println("failed to open file for writting");
+    return;
+   }
+   
+  
+
+   file1.println("on");
+   file1.println("mush-room");
+   file1.println("86753099");
+
+   file1.close();
+
+    //write limit data factory
+    
+    File file2 = SPIFFS.open("/limit.txt", "w");
+
+   if (!file2) {
+    Serial.println("failed to open file for writting");
+    return;
+   }
+   
+   file2.println("70");
+   file2.println("400");
+   file2.println("40");
+   
+   file2.close();
+
+      
+  // time write factory
+
+    File file3 = SPIFFS.open("/time.txt", "w");
+
+   if (!file3) {
+    Serial.println("failed to open time file for writting");
+    return;
+   }
+
+   file3.println("PST");
+   file3.println("00:00");
+   
+  
+   file3.close();
+
+   
+
+   //begin light file read
+   File file4 = SPIFFS.open("/light.txt", "w");
+
+   if (!file4) {
+    Serial.println("failed to open light file for writting");
+    return;
+   }
+   
+   
+    file4.println("01:00");
+    file4.println("00:00");
+    file4.println("on");
+    file4.close();
+
+  
+    ESP.reset();
+
+        
+};
 
 
 
@@ -2681,6 +2872,11 @@ void readStoredData(){
 
         
 };
+
+
+
+
+
 
 bool enableWifi(){
 
