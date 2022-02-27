@@ -42,12 +42,14 @@ $(document).ready(function () {
     $('#manual_override').change(function () {
         console.log("manual_override!");
 
+        //pull state data here to set switches to proper location
+
         if (this.checked) {
             $("#manual_action").load("manual_override_on")
-            console.log("light on");
+            console.log("manual on");
         } else {
             $("#manual_action").load("manual_override_off")
-            console.log("light off");
+            console.log("manual off");
         }
 
     });
