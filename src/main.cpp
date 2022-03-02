@@ -20,6 +20,9 @@ using namespace std;
 
 #define DHTTYPE DHT22
 
+
+
+
 // Set WiFi credentials
 //#define WIFI_SSID "KidsWifi"
 //#define WIFI_PASS "xxyy123456"
@@ -105,6 +108,8 @@ void FactoryResetStoredData();
 void jsWindowLoad();
 void manualOverrideOn();
 void manualOverrideOff();
+void allWhite();
+void theaterChase(uint32_t color, int wait);
 
 
 String clockSet(String clockData);
@@ -133,18 +138,24 @@ char *charSet[]= {"A", "B", "C"};
 * @param humidity [%RH]
 */
 uint8_t DHTPin = D6;
+uint8_t LEDPin = D5;
+uint8_t FANPin = D7;
+uint8_t HUMIDITYPin = D8;
 
-uint8_t LED_PIN = D5;
 
-uint8_t LED_COUNT = 20;
 
 DHT dht(DHTPin, DHTTYPE); 
+
+#define LED_PIN D5
+// How many NeoPixels are attached to the Arduino?
+#define LED_COUNT 20
+
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //const int Push_button_1 = 13;
 
-uint8_t Push_button_2 = D5;
-uint8_t Push_button_1 = D6;
-uint8_t Push_button_3 = D7;
+uint8_t Push_button_1 = D5;
+uint8_t Push_button_2 = D6;
+//uint8_t Push_button_3 = D7;
 
 uint8_t Relay1 = D8;
 
@@ -721,15 +732,25 @@ void limitStatus() {
   hum = limit_data[2].toInt();
 
   if (manual_override == true) {
-    Serial.println("manual override active");
+    //Serial.println("manual override active");
     return;
   }
+
+  //Serial.print("Humidity : ");
+  //Serial.println(Humidity);
+  //Serial.print("Humidity Limit : ");
+  //Serial.println(hum);
 
   if ( (sgp.eCO2 > carbon_dioxide ||  Temperature > temp) && fan_auto !=true ) {
 
     
     Serial.println("Co2 limit or temp reached, fan on");
     fan_auto=true;
+    digitalWrite(FANPin, HIGH);
+    theaterChase(strip.Color(0,   0,   30), 50);
+    strip.clear();
+    strip.show();
+    light_auto = false;
     
     }
       
@@ -737,24 +758,40 @@ void limitStatus() {
 
         Serial.println("Co2 / temp limit good, fan off");
         fan_auto = false;
+        digitalWrite(FANPin, LOW);
+        //theaterChase(strip.Color(127,   0,   0), 50);
+        strip.clear();
+        strip.show();
+        light_auto = false;
+        
 
     }
   
 
-  if ( hum < Humidity &&  hum_auto !=true ) {
+  if ( Humidity < hum && hum_auto !=true ) {
 
      
     Serial.println("hum low limit reached, hum on");
     hum_auto = true;
+    digitalWrite(HUMIDITYPin, HIGH);
+    theaterChase(strip.Color(0,   30,   0), 50);
+    strip.clear();
+    strip.show();
+    light_auto = false;
     
 
   }
 
-  if ( hum >= Humidity && hum_auto == true ) {
+  if ( Humidity >= hum && hum_auto == true ) {
 
      
     Serial.println("hum low limit reached, hum off");
     hum_auto = false;
+    digitalWrite(HUMIDITYPin, LOW);
+    //theaterChase(strip.Color(127,   0,   0), 50);
+    strip.clear();
+    strip.show();
+    light_auto = false;
     
 
   }
@@ -810,6 +847,7 @@ void lightStatus(){
         //fire off light on command
         Serial.println("Lights on");
         light_auto = true;
+        allWhite();
       }
        
        }    
@@ -825,6 +863,9 @@ void lightStatus(){
         //fire off light on command
         Serial.println("Lights off");
         light_auto = false;
+        strip.clear();
+        strip.show();
+        strip.show();
       }
        
        }    
@@ -1916,31 +1957,7 @@ void updateOnChange(){
 
 
 
-// light functions
 
-void allWhite() {
-
-  uint8_t index;
-
-  for ( index=0; index<LED_COUNT; index++){
-    strip.setPixelColor(index, strip.Color(255,255,255));
-  }
-  strip.show();
-}
-
-void theaterChase(uint32_t color, int wait) {
-  for(int a=0; a<10; a++) {  // Repeat 10 times...
-    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
-      strip.clear();         //   Set all pixels in RAM to 0 (off)
-      // 'c' counts up from 'b' to end of strip in steps of 3...
-      for(int c=b; c<strip.numPixels(); c += 3) {
-        strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
-      }
-      strip.show(); // Update strip with new contents
-      delay(wait);  // Pause for a moment
-    }
-  }
-} 
 
 
 
@@ -1956,12 +1973,22 @@ void setup() {
   pcf.write(0B11111111);  // Turns all pins/ports HIGH
   Wire.begin();  
   sgp.begin();
-  strip.begin();
-  strip.show();
-  strip.setBrightness(255);
   pinMode(DHTPin, INPUT);
-
   dht.begin();
+  pinMode(LEDPin, OUTPUT);
+  strip.begin();
+  //strip.clear();
+  strip.show();
+  pinMode(FANPin, OUTPUT);
+  pinMode(HUMIDITYPin, OUTPUT);
+  //strip.setBrightness(255);
+  //allWhite();4
+  //delay(1000);
+  //strip.clear();
+  //strip.show();
+
+
+  
   u8g2.begin();
   u8g2.clearBuffer();                   //clear the internal memory
   u8g2.drawBitmap(0,0,16,64,unit42);  //bootScreen is the above BitMap
@@ -2046,10 +2073,10 @@ void setup() {
 
   server.begin();
     
-  pinMode(Push_button_1,INPUT);
+  //pinMode(Push_button_1,OUTPUT);
   pinMode(Push_button_2,INPUT);
-  pinMode(Push_button_3,INPUT);
-  pinMode(Relay1,OUTPUT);
+  //pinMode(Push_button_3,INPUT);
+  //pinMode(Relay1,OUTPUT);
 
   //WiFi.mode(WIFI_AP);
   
@@ -2106,6 +2133,7 @@ void loop() {
   server.handleClient();
 
   lightStatus();
+  //allWhite();
   limitStatus();
 
   data1 = pcf.digitalRead(4);
@@ -2327,24 +2355,32 @@ void manualOverrideOff(){
 
 void handle_FanOn(){
 Serial.println("fan on");
- digitalWrite(Relay1, HIGH);
+ digitalWrite(FANPin, HIGH);
  fan_manual = true;
  server.send(200, "text/html", "fan_on");
 };
 
 void handle_FanOff(){
   Serial.println("fan off");
- digitalWrite(Relay1, LOW);
+ digitalWrite(FANPin, LOW);
  fan_manual = false;
  server.send(200, "text/html", "fan_off");
 };
 
 void handle_LightOn(){
-Serial.println("light on");
+Serial.println("light switch on");
  //digitalWrite(Relay1, HIGH);
  light_data[3] = "on";
  light_manual = true;
- allWhite();
+
+  //strip.begin();
+  //strip.clear();
+  //strip.show();
+  //strip.setBrightness(255);
+  allWhite();
+  delay(1000);
+ //allWhite();
+ //delay(1000);
  server.send(200, "text/html", "light_on");
 };
 
@@ -2355,20 +2391,22 @@ void handle_LightOff(){
  light_manual = false;
  strip.clear();
  strip.show();
+ strip.show();
+ strip.show();
  server.send(200, "text/html", "light_off");
 };
 
 
 void handle_HumidityOn(){
 Serial.println("humidity on");
- //digitalWrite(Relay1, HIGH);
+ digitalWrite(HUMIDITYPin, HIGH);
  hum_manual = true;
  server.send(200, "text/html", "humidity_on");
 };
 
 void handle_HumidityOff(){
   Serial.println("humidity off");
- //digitalWrite(Relay1, LOW);
+ digitalWrite(HUMIDITYPin, LOW);
  hum_manual = false;
  server.send(200, "text/html", "humidity_off");
 };
@@ -2615,7 +2653,7 @@ void writeStoredLimitData(){
 
   
   while (file.available()) {
-    wifi_data.push_back(file.readStringUntil('\n'));
+    limit_data.push_back(file.readStringUntil('\n'));
     Serial.println("validating limit file....");
     }
    file.close();
@@ -3203,7 +3241,33 @@ char output_time[8];
   return output_time;
 
 }
+// light functions
 
+
+void allWhite() {
+
+  uint8_t index;
+
+  for ( index=0; index<20; index++){
+    strip.setPixelColor(index, strip.Color(255,255,255));
+  }
+  Serial.println("light set white");
+  strip.show();
+}
+
+void theaterChase(uint32_t color, int wait) {
+  for(int a=0; a<10; a++) {  // Repeat 10 times...
+    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+      strip.clear();         //   Set all pixels in RAM to 0 (off)
+      // 'c' counts up from 'b' to end of strip in steps of 3...
+      for(int c=b; c<strip.numPixels(); c += 3) {
+        strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
+      }
+      strip.show(); // Update strip with new contents
+      delay(wait);  // Pause for a moment
+    }
+  }
+} 
 
 
 
