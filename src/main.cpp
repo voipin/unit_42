@@ -8,7 +8,16 @@
 #include <pu2clr_pcf8574.h>
 #include <string.h>
 #include <Adafruit_NeoPixel.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPUpdateServer.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
+const long utcOffsetInSeconds = -28800;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+
+ESP8266HTTPUpdateServer httpUpdater;
 
 PCF pcf;
 
@@ -432,6 +441,16 @@ ptr +="    <h1 class=\"display-4\">Control</h1>\n";
 ptr +="    <p class=\"lead\">Control all systems</p>\n";
 ptr +="</div>\n";
 ptr +="<div class=\"container\">\n";
+ptr +="<div class=\"card-deck text-center\">";
+ptr +="               <div class=\"card mx-auto\" style=\"width: 18rem;\">";
+ptr +="                <div class=\"nav-scroller py-1 mb-2\">";
+ptr +="                    <nav class=\"nav d-flex justify-content-between\">";
+ptr +="                        <a class=\"p-sm-1 text-muted\" href=\"/update\">Update</a>";
+ptr +="                    </nav>";
+ptr +="                </div>";
+
+
+
 ptr +="    <div class=\"card-deck text-center\">\n";
 ptr +="        <div class=\"card box-shadow mx-auto\" style=\"width: 18rem;\">\n";
 ptr +="            <div class=\"card-header\">\n";
@@ -1951,6 +1970,7 @@ void setup() {
   
   
   Serial.begin(115200);
+  timeClient.begin();
   while (!Serial); 
   pcf.setup(0x20);        // The PCF8574 is configured to 0x20 I2C address. Check A0, A1 and A2 pins of the device.
   pcf.write(0B11111111);  // Turns all pins/ports HIGH
@@ -2043,7 +2063,8 @@ void setup() {
   String get_time = clockOutput();
   Serial.println(get_time);
 
-
+  httpUpdater.setup(&server);
+  
   server.begin();
     
   pinMode(Push_button_1,INPUT);
@@ -2088,12 +2109,23 @@ void setup() {
     //while (1);
   }
   Serial.print("Found SGP30 serial #");
+
+
+
   Serial.print(sgp.serialnumber[0], HEX);
   Serial.print(sgp.serialnumber[1], HEX);
   Serial.println(sgp.serialnumber[2], HEX);
 
   // If you have a baseline measurement from before you can assign it to start, to 'self-calibrate'
   //sgp.setIAQBaseline(0x8E68, 0x8F41);  // Will vary for each sensor!
+
+    timeClient.update();
+    Serial.println("NTP UPDATE:");
+    Serial.print(timeClient.getHours());
+    Serial.print(":");
+    Serial.print(timeClient.getMinutes());
+    Serial.print(":");
+    Serial.println(timeClient.getSeconds());
 }
 
 int counter = 0;
@@ -2104,6 +2136,7 @@ void loop() {
   
   timeTrack();
   server.handleClient();
+  
 
   lightStatus();
   limitStatus();
